@@ -1,12 +1,11 @@
-c_sources = 
-cuda_sources = lb.cu main.cu SwimmerArray.cu
+cuda_sources = lb.cu SwimmerArray.cu
 
-objects = $(subst .cpp,.o,$(c_sources)) $(subst .cu,.o,$(cuda_sources)) 
+objects = $(subst .cu,.o,$(cuda_sources)) 
 
-CC = nvcc
+CFLAGS = -arch=sm_35 --shared --compiler-options '-fPIC'
 
 %.o : %.cu
-	$(CC) -c $<
+	nvcc -dc $(CFLAGS) $<
 
-swimmers : $(objects)
-	$(CC) $^ -o $@
+liblbswim.so : $(objects)
+	gcc -shared $^ -o $@

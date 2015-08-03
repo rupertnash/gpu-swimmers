@@ -4,6 +4,10 @@
 #include "d3q15.h"
 #include "LBParams.h"
 
+#ifdef __cplusplus 
+extern "C" {
+#endif
+
 typedef struct LatticeAddressing {
   int size[DQ_d];
   int strides[DQ_d];
@@ -36,5 +40,8 @@ typedef struct Lattice {
 
 } Lattice;
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

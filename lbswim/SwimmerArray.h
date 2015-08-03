@@ -3,6 +3,10 @@
 
 #include "Lattice.h"
 
+#ifdef __cplusplus 
+extern "C" {
+#endif
+
 struct SwimmerArrayImpl {
   int num;
   double hydroRadius;
@@ -26,5 +30,9 @@ void SwimmerArrayDel(SwimmerArray* sa);
 
 void SwimmerArrayAddForces(SwimmerArray* sa, Lattice* lat);
 void SwimmerArrayMove(SwimmerArray* sa, Lattice* lat);
+
+#ifdef __cplusplus 
+}
+#endif
 
 #endif
