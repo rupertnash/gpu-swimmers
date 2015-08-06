@@ -29,14 +29,6 @@
 
 #include "LBParams.h"
 
-#ifdef __cplusplus 
-extern "C" {
-#endif
-
 void LatticeEigenSet(LBParams* lat);
-
-#ifdef __cplusplus 
-}
-#endif
 
 #endif

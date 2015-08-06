@@ -3,36 +3,19 @@
 
 #include "Lattice.h"
 
-#ifdef __cplusplus 
-extern "C" {
-#endif
-
-struct SwimmerArrayImpl {
+struct SwimmerArray {
+  SwimmerArray(int n, double hydro);
+  void AddForces(Lattice* lat);
+  void Move(Lattice* lat);
   int num;
   double hydroRadius;
-  
-  double* r;
-  double* v;
-  double* n;
-  double* P;
-  double* a;
-  double* l;
+  SharedArray<double> r;
+  SharedArray<double> v;
+  SharedArray<double> n;
+  SharedArray<double> P;
+  SharedArray<double> a;
+  SharedArray<double> l;
 };
 
-struct SwimmerArray {
-  SwimmerArrayImpl* h;
-  SwimmerArrayImpl* d;
-  SwimmerArrayImpl* d_h;
-};
-
-SwimmerArray* SwimmerArrayNew(int n, double hydro);
-void SwimmerArrayDel(SwimmerArray* sa);
-
-void SwimmerArrayAddForces(SwimmerArray* sa, Lattice* lat);
-void SwimmerArrayMove(SwimmerArray* sa, Lattice* lat);
-
-#ifdef __cplusplus 
-}
-#endif
 
 #endif

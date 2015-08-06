@@ -1,57 +1,10 @@
 #include "SwimmerArray.h"
 #include <math.h>
 
-SwimmerArray* SwimmerArrayNew(int num, double hydro) {
-  SwimmerArray* ans = (SwimmerArray*)malloc(sizeof(SwimmerArray));
-  
-  ans->h = (SwimmerArrayImpl*)malloc(sizeof(SwimmerArrayImpl));
-  ans->h->num = num;
-  ans->h->hydroRadius = hydro;
-  
-  ans->h->r = (double*)malloc(DQ_d * num*sizeof(double));
-  ans->h->v = (double*)malloc(DQ_d * num*sizeof(double));
-  ans->h->n = (double*)malloc(DQ_d * num*sizeof(double));
-  ans->h->P = (double*)malloc(num * sizeof(double));
-  ans->h->a = (double*)malloc(num * sizeof(double));
-  ans->h->l = (double*)malloc(num * sizeof(double));
-  
-  ans->d_h = (SwimmerArrayImpl*)malloc(sizeof(SwimmerArrayImpl));
-
-  ans->d_h->num = num;
-  ans->d_h->hydroRadius = hydro;
-  cudaMalloc(&ans->d_h->r, DQ_d * num*sizeof(double));
-  cudaMalloc(&ans->d_h->v, DQ_d * num*sizeof(double));
-  cudaMalloc(&ans->d_h->n, DQ_d * num*sizeof(double));
-  cudaMalloc(&ans->d_h->P, num * sizeof(double));
-  cudaMalloc(&ans->d_h->a, num * sizeof(double));
-  cudaMalloc(&ans->d_h->l, num * sizeof(double));
-
-  cudaMalloc(&ans->d, sizeof(SwimmerArrayImpl));
-  cudaMemcpy(ans->d, ans->d_h, sizeof(SwimmerArrayImpl), cudaMemcpyHostToDevice);
-  return ans;
-}
-
-void SwimmerArrayDel(SwimmerArray* sa) {
-  cudaFree(sa->d);
-  cudaFree(sa->d_h->l);
-  cudaFree(sa->d_h->a);
-  cudaFree(sa->d_h->P);
-  cudaFree(sa->d_h->n);
-  cudaFree(sa->d_h->v);
-  cudaFree(sa->d_h->r);
-  
-  free(sa->d_h);
-  
-  free(sa->h->l);
-  free(sa->h->a);
-  free(sa->h->P);
-  free(sa->h->n);
-  free(sa->h->v);
-  free(sa->h->r);
-
-  free(sa->h);
-
-  free(sa);
+SwimmerArray::SwimmerArray(int num_, double hydroRadius_) : 
+  num(num_), hydroRadius(hydroRadius_),
+  r(num_*DQ_d), v(num_*DQ_d), n(num_*DQ_d), P(num_), a(num_), l(num_)
+{
 }
 
 __device__ double peskin_delta(double x) {
@@ -90,8 +43,8 @@ __device__ double atomicAdd(double* address, double val) {
   return __longlong_as_double(old);
 }
 
-__device__ void AccumulateDeltaForce(LatticeImpl* lat, double* r, double* F) {
-  int* n = lat->addr->size;
+__device__ void AccumulateDeltaForce(const LatticeAddressing* addr, double* lat_force, double* r, double* F) {
+  const int* n = addr->size;
   int indices[DQ_d][4];
   double deltas[DQ_d][4];
   double x, x0;
@@ -110,16 +63,16 @@ __device__ void AccumulateDeltaForce(LatticeImpl* lat, double* r, double* F) {
   for (i=0; i<4; ++i) {
     for (j=0; j<4; ++j) {
       for (k=0; k<4; ++k) {
-	int ijk = (lat->addr->strides[DQ_X]*indices[DQ_X][i] +
-		   lat->addr->strides[DQ_Y]*indices[DQ_Y][j] +
-		   lat->addr->strides[DQ_Z]*indices[DQ_Z][k]);
+	int ijk = (addr->strides[DQ_X]*indices[DQ_X][i] +
+		   addr->strides[DQ_Y]*indices[DQ_Y][j] +
+		   addr->strides[DQ_Z]*indices[DQ_Z][k]);
 
 	double delta3d = (deltas[DQ_X][i] *
 			  deltas[DQ_Y][j] *
 			  deltas[DQ_Z][k]);
 	/* add force contributions */
 	for (d=0; d<DQ_d; ++d) {
-	  atomicAdd(lat->data->force_ptr + d*lat->addr->n + ijk,
+	  atomicAdd(lat_force + d * addr->n + ijk,
 		    delta3d * F[d]);
 	}
 	
@@ -130,11 +83,16 @@ __device__ void AccumulateDeltaForce(LatticeImpl* lat, double* r, double* F) {
 }
 
 
-__global__ void DoSwimmerArrayAddForces(SwimmerArrayImpl* sa,
-					LatticeImpl* lat) {
+__global__ void DoSwimmerArrayAddForces(const int nSwim, 
+					const double* swim_r,
+					const double* swim_n,
+					const double* swim_l,
+					const double* swim_P,
+					const LatticeAddressing* addr,
+					double* lat_force) {
   int iSwim = threadIdx.x + blockIdx.x * blockDim.x;
   /* If we're out of range, skip */
-  if (iSwim >= sa->num) return;
+  if (iSwim >= nSwim) return;
   
   int a;
   /* tail end */
@@ -143,32 +101,36 @@ __global__ void DoSwimmerArrayAddForces(SwimmerArrayImpl* sa,
   double force[DQ_d];
   
   for (a=0; a<DQ_d; a++) {
-    r[a] = sa->r[sa->num*a + iSwim] - sa->n[sa->num*a + iSwim] * sa->l[iSwim];
-    force[a] = -sa->P[iSwim] * sa->n[sa->num*a + iSwim];
+    r[a] = swim_r[nSwim*a + iSwim] - swim_n[nSwim*a + iSwim] * swim_l[iSwim];
+    force[a] = -swim_P[iSwim] * swim_n[nSwim*a + iSwim];
   }
-  AccumulateDeltaForce(lat, r, force);
+  AccumulateDeltaForce(addr, lat_force, r, force);
   
   /* head end */
   /* opposite force */
   for (a=0; a<DQ_d; a++) {
-    r[a] = sa->r[sa->num*a + iSwim];
+    r[a] = swim_r[nSwim*a + iSwim];
     force[a] *= -1.0;
   }
   
-  AccumulateDeltaForce(lat, r, force);
+  AccumulateDeltaForce(addr, lat_force, r, force);
 }
 
-void SwimmerArrayAddForces(SwimmerArray* sa, Lattice* lat) {
-  const int nSwim = sa->h->num;
+void SwimmerArray::AddForces(Lattice* lat) {
   const int blockSize = 512;
-  const int numBlocks = (nSwim + blockSize - 1)/blockSize;
+  const int numBlocks = (num + blockSize - 1)/blockSize;
 
-  DoSwimmerArrayAddForces<<<numBlocks, blockSize>>>(sa->d, lat->d);
+  DoSwimmerArrayAddForces<<<numBlocks, blockSize>>>(num,
+						    r.device, n.device,
+						    l.device, P.device,
+						    lat->addr.device, lat->data->force.device);
 }
 
-__device__ void InterpVelocity(const LatticeImpl* lat, const double* r,
+__device__ void InterpVelocity(const LatticeAddressing* addr,
+			       const double* lat_u,
+			       const double* r,
 			       double* v) {
-  const int* n = lat->addr->size;
+  const int* n = addr->size;
   int indices[DQ_d][4];
   double deltas[DQ_d][4];
   double delta3d;
@@ -193,11 +155,11 @@ __device__ void InterpVelocity(const LatticeImpl* lat, const double* r,
       for (k=0; k<4; ++k) {
 	/* evaluate the delta function */
 	delta3d = deltas[DQ_X][i] * deltas[DQ_Y][j] * deltas[DQ_Z][k];
-	int ijk = (lat->addr->strides[DQ_X]*indices[DQ_X][i] +
-		   lat->addr->strides[DQ_Y]*indices[DQ_Y][j] +
-		   lat->addr->strides[DQ_Z]*indices[DQ_Z][k]);
+	int ijk = (addr->strides[DQ_X]*indices[DQ_X][i] +
+		   addr->strides[DQ_Y]*indices[DQ_Y][j] +
+		   addr->strides[DQ_Z]*indices[DQ_Z][k]);
 	for (d=0; d<3; ++d) {
-	  v[d] += delta3d * lat->data->force_ptr[d*lat->addr->n + ijk];
+	  v[d] += delta3d * lat_u[d*addr->n + ijk];
 	}
       }
     }
@@ -205,7 +167,17 @@ __device__ void InterpVelocity(const LatticeImpl* lat, const double* r,
   
 }
 
-__global__ void DoSwimmerArrayMove(SwimmerArrayImpl* sa, LatticeImpl* lat) {
+__global__ void DoSwimmerArrayMove(const int nSwim,
+				   const double hydroRadius,
+				   double* swim_r,
+				   double* swim_v,
+				   double* swim_n,
+				   const double* swim_P,
+				   const double* swim_a,
+				   const double* swim_l,
+				   const LatticeAddressing* addr,
+				   const LBParams* params,
+				   const double* lat_u) {
   /* Updates the swimmers' positions using:
    *     Rdot = v(R) + Fn_/(6 pi eta a)
    * where v(R) is the interpolated velocity at the position of the
@@ -213,67 +185,71 @@ __global__ void DoSwimmerArrayMove(SwimmerArrayImpl* sa, LatticeImpl* lat) {
    */
   const int iSwim = threadIdx.x + blockIdx.x * blockDim.x;
   /* If we're out of range, skip */
-  if (iSwim >= sa->num) return;
+  if (iSwim >= nSwim) return;
   
-  const int* size = lat->addr->size;
+  const int* size = addr->size;
   double v[DQ_d];
-  double r[DQ_d] = {sa->r[sa->num*DQ_X + iSwim],
-		    sa->r[sa->num*DQ_Y + iSwim],
-		    sa->r[sa->num*DQ_Z + iSwim]};
-  // CHECK
-  const double eta = lat->params->tau_s*3;
+  double r[DQ_d] = {swim_r[nSwim*DQ_X + iSwim],
+		    swim_r[nSwim*DQ_Y + iSwim],
+		    swim_r[nSwim*DQ_Z + iSwim]};
+  const double eta = params->tau_s*params->cs2;
 
-  InterpVelocity(lat, r, v);
+  InterpVelocity(addr, lat_u, r, v);
   
   double rDot[DQ_d];
   double rMinus[DQ_d];
   
   for (int d=0; d<DQ_d; d++) {
-    rDot[d] = sa->P[iSwim] * sa->n[sa->num*d + iSwim];
-    rDot[d] *= (1./sa->a[iSwim] - 1./sa->hydroRadius) / (6. * M_PI * eta);
+    rDot[d] = swim_P[iSwim] * swim_n[nSwim*d + iSwim];
+    rDot[d] *= (1./swim_a[iSwim] - 1./hydroRadius) / (6. * M_PI * eta);
     rDot[d] += v[d];
     
-    rMinus[d] = r[d] - sa->n[sa->num*d + iSwim] * sa->l[iSwim];
+    rMinus[d] = r[d] - swim_n[nSwim*d + iSwim] * swim_l[iSwim];
   }
   
   double vMinus[DQ_d];
-  InterpVelocity(lat, rMinus, vMinus);
+  InterpVelocity(addr, lat_u, rMinus, vMinus);
 
   double nDot[DQ_d];
   for (int d=0; d<DQ_d; d++) {
     nDot[d] = v[d] - vMinus[d];
     /* now nDot = v(rPlus) - v(rMinus) */
     /* so divide by l to get the rate */
-    nDot[d] /= sa->l[iSwim];
+    nDot[d] /= swim_l[iSwim];
   }
   
   /* self.applyMove(lattice, rDot) */
   for (int d=0; d<DQ_d; d++) {
-    sa->v[sa->num*d + iSwim] = rDot[d];
+    swim_v[nSwim*d + iSwim] = rDot[d];
     
     /* new position */
     r[d] += rDot[d];
     /* deal with PBC */
-    sa->r[sa->num*d + iSwim] = fmod(r[d] + size[d], size[d]);
+    swim_r[nSwim*d + iSwim] = fmod(r[d] + size[d], size[d]);
   }
 
   /* self.applyTurn(lattice, nDot) */
   double newn[DQ_d];
   double norm = 0.0;
   for (int d=0; d<DQ_d; d++) {
-    newn[d] =  sa->n[sa->num*d + iSwim] + nDot[d];
+    newn[d] =  swim_n[nSwim*d + iSwim] + nDot[d];
     norm += newn[d]*newn[d];
   }
   norm = sqrt(norm);
   for (int d=0; d<DQ_d; d++) {
-    sa->n[sa->num*d + iSwim] = newn[d] / norm;
+    swim_n[nSwim*d + iSwim] = newn[d] / norm;
   }
 
 }
-void SwimmerArrayMove(SwimmerArray* sa, Lattice* lat) {
-  const int nSwim = sa->h->num;
+
+void SwimmerArray::Move(Lattice* lat) {
   const int blockSize = 512;
-  const int numBlocks = (nSwim + blockSize - 1)/blockSize;
+  const int numBlocks = (num + blockSize - 1)/blockSize;
   
-  DoSwimmerArrayMove<<<numBlocks, blockSize>>>(sa->d, lat->d);
+  DoSwimmerArrayMove<<<numBlocks, blockSize>>>(num, hydroRadius,
+					       r.device, v.device, v.device,
+					       P.device, a.device, l.device,
+					       lat->addr.device,
+					       lat->params.device,
+					       lat->data->u.device);
 }

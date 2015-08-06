@@ -3,45 +3,67 @@
 
 #include "d3q15.h"
 #include "LBParams.h"
+#include "Shared.h"
 
-#ifdef __cplusplus 
-extern "C" {
-#endif
-
-typedef struct LatticeAddressing {
+struct LatticeAddressing {
   int size[DQ_d];
   int strides[DQ_d];
   int n;
-} LatticeAddressing;
+};
+
+// struct LatticeArrays {
+//   /* Pointers to the distribution function array etc
+//    */
+//   double *f_current_ptr;
+//   double *f_new_ptr;
+//   double *rho_ptr;
+//   double *u_ptr;
+//   double *force_ptr;  
+// };
+
+// struct LatticeImpl {
+//   LBParams* params;
+//   LatticeAddressing* addr;
+//   LatticeArrays* data;
+// };
+
+struct LDView {
+  double* rho;
+  double* u;
+  double* force;
+  double* fOld;
+  double* fNew;  
+};
+
+struct LatticeData {
+  LatticeData(const LatticeAddressing& addr_);
+  //const LatticeAddressing& addr;
   
-typedef struct LatticeArrays {
-  /* Pointers to the distribution function array etc
-   */
-  double *f_current_ptr;
-  double *f_new_ptr;
-  double *rho_ptr;
-  double *u_ptr;
-  double *force_ptr;  
-} LatticeArrays;
+  LDView Host();
+  LDView Device();
 
-typedef struct LatticeImpl {
-  LBParams* params;
-  LatticeAddressing* addr;
-  LatticeArrays* data;
-} LatticeImpl;
+  SharedArray<double> rho;
+  SharedArray<double> u;
+  SharedArray<double> force;
+  SharedArray<double> fOld;
+  SharedArray<double> fNew;
+};
 
-typedef struct Lattice {
-  LatticeImpl* h;
-  LatticeImpl* d;
-  LatticeImpl* d_h;
-  LatticeArrays* d_arrays;
+
+struct Lattice {
+  Lattice(int nx, int ny, int nz, double tau_s, double tau_b);
+  ~Lattice();
+  void Step();
+  void CalcHydro();
+  void InitFromHydro();
+  void ZeroForce();
+
+  SharedItem<LBParams> params;
+  SharedItem<LatticeAddressing> addr;
+  LatticeData* data;
   /* Current timestep */
   int time_step;
 
-} Lattice;
-
-#ifdef __cplusplus
-}
-#endif
+};
 
 #endif

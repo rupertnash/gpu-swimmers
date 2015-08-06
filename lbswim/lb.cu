@@ -3,142 +3,75 @@
 
 #include "lb.h"
 #include "d3q15.h"
+#include "cucall.h"
 
 // This defines the LatticeEigenSet() for the D3Q15 velocity set
 #include "d3q15.c"
 
-#define CUDA_SAFE_CALL(call) do {					\
-  cudaError err = call;							\
-  if (err != cudaSuccess) {						\
-    fprintf(stderr, "CUDA error in file '%s' on line %i: %s\n",		\
-	    __FILE__, __LINE__, cudaGetErrorString(err));		\
-    exit(EXIT_FAILURE);							\
-  }									\
-  } while(0)
+LatticeData::LatticeData(const LatticeAddressing& addr) : rho(addr.n),
+							   u(addr.n*DQ_d),
+							   force(addr.n*DQ_d),
+							   fOld(addr.n*DQ_q),
+							   fNew(addr.n*DQ_q)
+{
+}
   
-LatticeImpl* LatticeInitHost(int nx, int ny, int nz, double tau_s, double tau_b) {
-  LatticeImpl* lat = (LatticeImpl*)malloc(sizeof(LatticeImpl));
+LDView LatticeData::Host() {
+  LDView v;
+  v.rho = rho.host;
+  v.u = u.host;
+  v.force = force.host;
+  v.fOld = fOld.host;
+  v.fNew = fNew.host;
+  return v;
+}
+LDView LatticeData::Device(){
+  LDView v;
+  v.rho = rho.device;
+  v.u = u.device;
+  v.force = force.device;
+  v.fOld = fOld.device;
+  v.fNew = fNew.device;
+  return v;
+}
 
-  /* LB parameters */
-  lat->params = (LBParams*)malloc(sizeof(LBParams));
-  LatticeEigenSet(lat->params);
-  lat->params->tau_s = tau_s;
-  lat->params->tau_b = tau_b;
-  
-  /* Addressing parameters */
-  lat->addr = (LatticeAddressing*)malloc(sizeof(LatticeAddressing));
-  
-  lat->addr->size[0] = nx;
-  lat->addr->size[1] = ny;
-  lat->addr->size[2] = nz;
-  
-  lat->addr->n = nx * ny * nz;
-  lat->addr->strides[DQ_X] = ny * nz;
-  lat->addr->strides[DQ_Y] = nz;
-  lat->addr->strides[DQ_Z] = 1;
-  
-  /* Data arrays */
-  lat->data = (LatticeArrays*)malloc(sizeof(LatticeArrays));
+//template void SharedArray<double>::H2D();
+template class SharedArray<double>;
+Lattice::Lattice(int nx, int ny, int nz, double tau_s, double tau_b) : time_step(0) {
+  // Set up params and move to device
+  params.host->tau_s = tau_s;
+  params.host->tau_b = tau_b;
+  LatticeEigenSet(params.host);
 
-  lat->data->f_current_ptr = (double *)malloc(lat->addr->n * DQ_q * sizeof(double));
-  lat->data->f_new_ptr = (double *)malloc(lat->addr->n * DQ_q * sizeof(double));
-  lat->data->rho_ptr = (double *)malloc(lat->addr->n * sizeof(double));
-  lat->data->u_ptr = (double *)malloc(lat->addr->n * DQ_d * sizeof(double));
+  params.H2D();
   
-  lat->data->force_ptr = (double *)malloc(lat->addr->n * DQ_d * sizeof(double));
+  // Set up addressing and move to device
+  addr.host->size[0] = nx;
+  addr.host->size[1] = ny;
+  addr.host->size[2] = nz;
+
+  addr.host->n = nx * ny * nz;
+
+  addr.host->strides[DQ_X] = ny * nz;
+  addr.host->strides[DQ_Y] = nz;
+  addr.host->strides[DQ_Z] = 1;
+
+  addr.H2D();
   
-  return lat;
+  // Set up data arrays, but don't copy
+  data = new LatticeData(*addr.host);
 }
 
 
-Lattice* LatticeNew(int nx, int ny, int nz, double tau_s, double tau_b) {
-  Lattice *lat = (Lattice *)malloc(sizeof(Lattice));
-  lat->time_step = 0;
-  
-  /* Create the host structure */
-  lat->h = LatticeInitHost(nx, ny, nz, tau_s, tau_b);
-
-  LatticeAddressing* addr = lat->h->addr;
-  
-  /* Alloc the host's pointers to the device structs */
-  lat->d_h = (LatticeImpl*)malloc(sizeof(LatticeImpl));
-
-  /* Alloc and copy the parameters on the device */
-  CUDA_SAFE_CALL(cudaMalloc(&lat->d_h->params, sizeof(LBParams)));
-  CUDA_SAFE_CALL(cudaMemcpy(lat->d_h->params,
-			    lat->h->params, sizeof(LBParams), cudaMemcpyHostToDevice));
-
-  /* Alloc and copy the addressing to the device */
-  CUDA_SAFE_CALL(cudaMalloc(&lat->d_h->addr, sizeof(LatticeAddressing)));
-  CUDA_SAFE_CALL(cudaMemcpy(lat->d_h->addr,
-			    addr, sizeof(LatticeAddressing), cudaMemcpyHostToDevice));
-  
-  /* Alloc the host's pointers to the device data arrays */
-  lat->d_h->data = (LatticeArrays*)malloc(sizeof(LatticeArrays));
-  /* Alloc the device data arrays */
-  CUDA_SAFE_CALL(cudaMalloc(&lat->d_h->data->f_current_ptr,
-			    addr->n * DQ_q * sizeof(double)));
-  CUDA_SAFE_CALL(cudaMalloc(&lat->d_h->data->f_new_ptr,
-			    addr->n * DQ_q * sizeof(double)));
-  CUDA_SAFE_CALL(cudaMalloc(&lat->d_h->data->rho_ptr,
-			    addr->n * sizeof(double)));
-  CUDA_SAFE_CALL(cudaMalloc(&lat->d_h->data->u_ptr,
-			    addr->n * DQ_d * sizeof(double)));
-  CUDA_SAFE_CALL(cudaMalloc(&lat->d_h->data->force_ptr,
-			    addr->n * DQ_d * sizeof(double)));
-
-  /* Alloc and copy the pointers to the device arrays to the device */
-  CUDA_SAFE_CALL(cudaMalloc(&lat->d_arrays, sizeof(LatticeArrays)));
-  CUDA_SAFE_CALL(cudaMemcpy(lat->d_arrays,
-			    lat->d_h->data, sizeof(LatticeArrays), cudaMemcpyHostToDevice));
-
-  /* Alloc and setup on the device the whole lot */
-  LatticeImpl devCopy;
-  devCopy.params = lat->d_h->params;
-  devCopy.addr = lat->d_h->addr;
-  devCopy.data = lat->d_arrays;
-  
-  CUDA_SAFE_CALL(cudaMalloc(&lat->d, sizeof(LatticeImpl)));
-  CUDA_SAFE_CALL(cudaMemcpy(lat->d, &devCopy,
-			    sizeof(LatticeImpl), cudaMemcpyHostToDevice));
-
-  return lat;
-}
-
-
-void LatticeDel(Lattice* lat) {
-  CUDA_SAFE_CALL(cudaFree(lat->d));
-  CUDA_SAFE_CALL(cudaFree(lat->d_arrays));
-  CUDA_SAFE_CALL(cudaFree(lat->d_h->data->f_current_ptr));
-  CUDA_SAFE_CALL(cudaFree(lat->d_h->data->f_new_ptr));
-  CUDA_SAFE_CALL(cudaFree(lat->d_h->data->rho_ptr));
-  CUDA_SAFE_CALL(cudaFree(lat->d_h->data->u_ptr));
-  CUDA_SAFE_CALL(cudaFree(lat->d_h->data->force_ptr));
-  free(lat->d_h->data);
-  CUDA_SAFE_CALL(cudaFree(lat->d_h->addr));
-  CUDA_SAFE_CALL(cudaFree(lat->d_h->params));
-  free(lat->d_h);
-
-  free(lat->h->data->f_current_ptr);
-  free(lat->h->data->f_new_ptr);
-  free(lat->h->data->rho_ptr);
-  free(lat->h->data->u_ptr);
-  free(lat->h->data->force_ptr);
-
-  free(lat->h->data);
-  
-  free(lat->h->addr);
-  free(lat->h->params);
-  free(lat->h);
-
-  free(lat);
-
-}
+Lattice::~Lattice() {
+  delete data;}
 
 __constant__ double DQ_delta[DQ_d][DQ_d] = {{1.0, 0.0, 0.0},
 					    {0.0, 1.0, 0.0},
 					    {0.0, 0.0, 1.0}};
-__global__ void DoStep(LatticeImpl* lat) {
+__global__ void DoStep(const LBParams* params,
+		       const LatticeAddressing* addr,
+		       LDView data) {
   const int siteIdx[DQ_d] = {threadIdx.x + blockIdx.x * blockDim.x,
 			 threadIdx.y + blockIdx.y * blockDim.y,
 			 threadIdx.z + blockIdx.z * blockDim.z};
@@ -147,14 +80,18 @@ __global__ void DoStep(LatticeImpl* lat) {
   int a,b;
   /* If we're out of bounds, skip */
   for (a=0; a<DQ_d; a++) {
-    if (siteIdx[a] >= lat->addr->size[a])
+    if (siteIdx[a] >= addr->size[a])
       return;
   }
-  const int ijk = siteIdx[DQ_X]*lat->addr->strides[DQ_X] + 
-    siteIdx[DQ_Y]*lat->addr->strides[DQ_Y] + 
-    siteIdx[DQ_Z]*lat->addr->strides[DQ_Z];
+  const int ijk = siteIdx[DQ_X]*addr->strides[DQ_X] + 
+    siteIdx[DQ_Y]*addr->strides[DQ_Y] + 
+    siteIdx[DQ_Z]*addr->strides[DQ_Z];
   
-  const int nSites = lat->addr->n;
+  const int nSites = addr->n;
+
+  const double* fOld = data.fOld;
+  const double* force = data.force;
+  double* fNew = data.fNew;
   
   /* loop indices for velocities & modes */
   int p,m;
@@ -165,25 +102,19 @@ __global__ void DoStep(LatticeImpl* lat) {
   double u[DQ_d];
   double usq, TrS, uDOTf;
   
-  const double tau_s = lat->params->tau_s;
-  const double tau_b = lat->params->tau_b;
+  const double tau_s = params->tau_s;
+  const double tau_b = params->tau_b;
   const double omega_s = 1.0 / (tau_s + 0.5);
   const double omega_b = 1.0 / (tau_b + 0.5);
 
-  /* dists at time = t */
-  const double* f_t = lat->data->f_current_ptr;
   /* Post collision dists */
   double fPostCollision[DQ_q];
-  /* dists at time = t + 1*/
-  double* f_tp1 = lat->data->f_new_ptr;
-
-  const double* force = lat->data->force_ptr;
 
   /* compute the modes */
   for (m=0; m<DQ_q; m++) {
     mode[m] = 0.;
     for (p=0; p<DQ_q; p++) {
-      mode[m] += f_t[p*nSites + ijk] * lat->params->mm[m][p];
+      mode[m] += fOld[p*nSites + ijk] * params->mm[m][p];
     }
   }
 
@@ -240,7 +171,7 @@ __global__ void DoStep(LatticeImpl* lat) {
 			  mode[DQ_rho]*(u[a]*u[b] -usq*DQ_delta[a][b]));
       
       /* including traceless force */
-      S[a][b] += 2.*omega_s*tau_s * (u[a]*force[b] + force[a]*u[b] - 2. * uDOTf * DQ_delta[a][b]);
+      S[a][b] += 2.*omega_s*tau_s * (u[a]*force[b*nSites + ijk] + force[a*nSites + ijk]*u[b] - 2. * uDOTf * DQ_delta[a][b]);
     }
     /* add the trace back on */
     S[a][a] += TrS / DQ_d;
@@ -267,34 +198,27 @@ __global__ void DoStep(LatticeImpl* lat) {
   for (p=0; p<DQ_q; p++) {
    fPostCollision[p] = 0.;
     for (m=0; m<DQ_q; m++) {
-      fPostCollision[p] += mode[m] * lat->params->mmi[p][m];
+      fPostCollision[p] += mode[m] * params->mmi[p][m];
     }
   }
 
   /* Stream */
   for (p=0; p<DQ_q; p++) {
-    const int* cp = lat->params->ci[p];
+    const int* cp = params->ci[p];
     int destIdx[DQ_d];
     int dest_ijk = 0;
     for (a=0; a<DQ_d; a++) {
       /* This does the PBC */
-      destIdx[a] = (siteIdx[a] + cp[a] + lat->addr->size[a]) % lat->addr->size[a];
-      dest_ijk +=  destIdx[a] * lat->addr->strides[a];
+      destIdx[a] = (siteIdx[a] + cp[a] + addr->size[a]) % addr->size[a];
+      dest_ijk +=  destIdx[a] * addr->strides[a];
     }
-    f_tp1[p*nSites + dest_ijk] = fPostCollision[p];
+    fNew[p*nSites + dest_ijk] = fPostCollision[p];
   }
 
 }
 
-/* Make sure to launch only once! */
-__global__ void DoSwapDists(LatticeImpl* lat) {
-  double* tmp = lat->data->f_current_ptr;
-  lat->data->f_current_ptr = lat->data->f_new_ptr;
-  lat->data->f_new_ptr = tmp;
-}
-
-void LatticeStep(Lattice* lat) {
-  const int* lat_size = lat->h->addr->size;
+void Lattice::Step() {
+  const int* lat_size = addr.host->size;
   const int bs = 8;
   
   dim3 block_shape;
@@ -306,19 +230,24 @@ void LatticeStep(Lattice* lat) {
   num_blocks.x = (lat_size[DQ_X] + block_shape.x - 1)/block_shape.x;
   num_blocks.y = (lat_size[DQ_Y] + block_shape.y - 1)/block_shape.y;
   num_blocks.z = (lat_size[DQ_Z] + block_shape.z - 1)/block_shape.z;
-
-  DoStep<<<num_blocks, block_shape>>>(lat->d);
+  
+  DoStep<<<num_blocks, block_shape>>>(params.device,
+				      addr.device,
+				      data->Device());
 
   /* Wait for completion */
   CUDA_SAFE_CALL(cudaDeviceSynchronize());
+
   /* Swap the f ptrs on the device */
-  DoSwapDists<<<1,1>>>(lat->d);
-  
-  lat->time_step++;
+  double* tmp = data->fOld.device;
+  data->fOld.device = data->fNew.device;
+  data->fNew.device = tmp;
+
+  time_step++;
 }
 
 
-__global__ void DoCalcHydro(LatticeImpl *lat) {
+__global__ void DoCalcHydro(const LBParams* params, const LatticeAddressing* addr, LDView data) {
   /* Index for loops over dimension */
   int a;
   const int siteIdx[DQ_d] = {threadIdx.x + blockIdx.x * blockDim.x,
@@ -327,30 +256,30 @@ __global__ void DoCalcHydro(LatticeImpl *lat) {
   
   /* If we're out of bounds, skip */
   for (a=0; a<DQ_d; a++) {
-    if (siteIdx[a] >= lat->addr->size[a])
+    if (siteIdx[a] >= addr->size[a])
       return;
   }
-  const int ijk = siteIdx[DQ_X]*lat->addr->strides[DQ_X] + 
-    siteIdx[DQ_Y]*lat->addr->strides[DQ_Y] + 
-    siteIdx[DQ_Z]*lat->addr->strides[DQ_Z];
+  const int ijk = siteIdx[DQ_X]*addr->strides[DQ_X] + 
+    siteIdx[DQ_Y]*addr->strides[DQ_Y] + 
+    siteIdx[DQ_Z]*addr->strides[DQ_Z];
   
-  const int nSites = lat->addr->n;
+  const int nSites = addr->n;
   
   /* Indices for loops over dists/modes */
   int m, p;
   double mode[DQ_q];
 
     /* dists at time = t */
-  const double* f_t = lat->data->f_current_ptr;
-  const double* force = lat->data->force_ptr;
-  double* u = lat->data->u_ptr;
-  double* rho = lat->data->rho_ptr;
+  const double* f_t = data.fOld;
+  const double* force = data.force;
+  double* u = data.u;
+  double* rho = data.rho;
 
   /* compute the modes */
   for (m=0; m<DQ_q; m++) {
     mode[m] = 0.;
     for (p=0; p<DQ_q; p++) {
-      mode[m] += f_t[p*nSites + ijk] * lat->params->mm[m][p];
+      mode[m] += f_t[p*nSites + ijk] * params->mm[m][p];
     }
   }
   
@@ -365,8 +294,8 @@ __global__ void DoCalcHydro(LatticeImpl *lat) {
 	
 }
 
-void LatticeCalcHydro(Lattice* lat) {
-  const int* lat_size = lat->h->addr->size;
+void Lattice::CalcHydro() {
+  const int* lat_size = addr.host->size;
   const int bs = 8;
 
   dim3 block_shape;
@@ -379,31 +308,31 @@ void LatticeCalcHydro(Lattice* lat) {
   num_blocks.y = (lat_size[DQ_Y] + block_shape.y - 1)/block_shape.y;
   num_blocks.z = (lat_size[DQ_Z] + block_shape.z - 1)/block_shape.z;
 
-  DoCalcHydro<<<num_blocks, block_shape>>>(lat->d);
+  DoCalcHydro<<<num_blocks, block_shape>>>(params.device, addr.device, data->Device());
 }
 
-__global__ void DoInitFromHydro(LatticeImpl* lat) {
+__global__ void DoInitFromHydro(const LBParams* params, const LatticeAddressing* addr, LDView data) {
   const int siteIdx[DQ_d] = {threadIdx.x + blockIdx.x * blockDim.x,
-			 threadIdx.y + blockIdx.y * blockDim.y,
-			 threadIdx.z + blockIdx.z * blockDim.z};
+			     threadIdx.y + blockIdx.y * blockDim.y,
+			     threadIdx.z + blockIdx.z * blockDim.z};
   
   /* loop indices for dimension */
   int a;
   /* If we're out of bounds, skip */
   for (a=0; a<DQ_d; a++) {
-    if (siteIdx[a] >= lat->addr->size[a])
+    if (siteIdx[a] >= addr->size[a])
       return;
   }
-  const int ijk = siteIdx[DQ_X]*lat->addr->strides[DQ_X] + 
-    siteIdx[DQ_Y]*lat->addr->strides[DQ_Y] + 
-    siteIdx[DQ_Z]*lat->addr->strides[DQ_Z];
-  const int nSites = lat->addr->n;
+  const int ijk = siteIdx[DQ_X]*addr->strides[DQ_X] + 
+    siteIdx[DQ_Y]*addr->strides[DQ_Y] + 
+    siteIdx[DQ_Z]*addr->strides[DQ_Z];
+  const int nSites = addr->n;
 
     /* dists at time = t */
-  double* f_t = lat->data->f_current_ptr;
+  double* f_t = data.fOld;
   //const double* force = lat->data->force_ptr;
-  const double* u = lat->data->u_ptr;
-  const double* rho = lat->data->rho_ptr;
+  const double* u = data.u;
+  const double* rho = data.rho;
 
   /* loop indices for velocities & modes */
   int p,m;
@@ -435,14 +364,14 @@ __global__ void DoInitFromHydro(LatticeImpl* lat) {
   for (p=0; p<DQ_q; p++) {
     f_t[p*nSites + ijk] = 0.;
     for (m=0; m<DQ_q; m++) {
-      f_t[p*nSites + ijk] += mode[m] * lat->params->mmi[p][m];
+      f_t[p*nSites + ijk] += mode[m] * params->mmi[p][m];
     }
   }
 
 }
 
-void LatticeInitFromHydro(Lattice* lat) {
-  const int* lat_size = lat->h->addr->size;
+void Lattice::InitFromHydro() {
+  const int* lat_size = addr.host->size;
   const int bs = 8;
 
   dim3 block_shape;
@@ -455,10 +384,10 @@ void LatticeInitFromHydro(Lattice* lat) {
   num_blocks.y = (lat_size[DQ_Y] + block_shape.y - 1)/block_shape.y;
   num_blocks.z = (lat_size[DQ_Z] + block_shape.z - 1)/block_shape.z;
 
-  DoInitFromHydro<<<num_blocks, block_shape>>>(lat->d);
+  DoInitFromHydro<<<num_blocks, block_shape>>>(params.device, addr.device, data->Device());
 }
 
-__global__ void DoLatticeZeroForce(LatticeImpl* lat) {
+__global__ void DoLatticeZeroForce(const LBParams* params, const LatticeAddressing* addr, LDView data) {
   /* Index for loops over dimension */
   int a;
   const int siteIdx[DQ_d] = {threadIdx.x + blockIdx.x * blockDim.x,
@@ -467,22 +396,22 @@ __global__ void DoLatticeZeroForce(LatticeImpl* lat) {
   
   /* If we're out of bounds, skip */
   for (a=0; a<DQ_d; a++) {
-    if (siteIdx[a] >= lat->addr->size[a])
+    if (siteIdx[a] >= addr->size[a])
       return;
   }
-  const int ijk = siteIdx[DQ_X]*lat->addr->strides[DQ_X] + 
-    siteIdx[DQ_Y]*lat->addr->strides[DQ_Y] + 
-    siteIdx[DQ_Z]*lat->addr->strides[DQ_Z];
+  const int ijk = siteIdx[DQ_X]*addr->strides[DQ_X] + 
+    siteIdx[DQ_Y]*addr->strides[DQ_Y] + 
+    siteIdx[DQ_Z]*addr->strides[DQ_Z];
   
-  const int nSites = lat->addr->n;
+  const int nSites = addr->n;
   
   for (a=0; a<DQ_d; a++) {
-    lat->data->force_ptr[a*nSites + ijk] = 0.0;
+    data.force[a*nSites + ijk] = 0.0;
   }
 }
 
-void LatticeZeroForce(Lattice* lat) {
-  const int* lat_size = lat->h->addr->size;
+void Lattice::ZeroForce() {
+  const int* lat_size = addr.host->size;
   const int bs = 8;
 
   dim3 block_shape;
@@ -495,83 +424,6 @@ void LatticeZeroForce(Lattice* lat) {
   num_blocks.y = (lat_size[DQ_Y] + block_shape.y - 1)/block_shape.y;
   num_blocks.z = (lat_size[DQ_Z] + block_shape.z - 1)/block_shape.z;
 
-  DoLatticeZeroForce<<<num_blocks, block_shape>>>(lat->d);
+  DoLatticeZeroForce<<<num_blocks, block_shape>>>(params.device, addr.device, data->Device());
 }
 
-void LatticeRhoH2D(Lattice* lat) {
-  LatticeAddressing* addr = lat->h->addr;
-  CUDA_SAFE_CALL(cudaMemcpy(lat->d_h->data->rho_ptr,
-			    lat->h->data->rho_ptr,
-			    addr->n * sizeof(double),
-			    cudaMemcpyHostToDevice));
-}
-
-void LatticeRhoD2H(Lattice* lat) {
-  LatticeAddressing* addr = lat->h->addr;
-  CUDA_SAFE_CALL(cudaMemcpy(lat->h->data->rho_ptr,
-			    lat->d_h->data->rho_ptr,
-			    addr->n * sizeof(double),
-			    cudaMemcpyDeviceToHost));
-}
-
-void LatticeUH2D(Lattice* lat) {
-  LatticeAddressing* addr = lat->h->addr;
-  CUDA_SAFE_CALL(cudaMemcpy(lat->d_h->data->u_ptr,
-			    lat->h->data->u_ptr,
-			    addr->n * DQ_d * sizeof(double),
-			    cudaMemcpyHostToDevice));
-}
-
-void LatticeUD2H(Lattice* lat) {
-  LatticeAddressing* addr = lat->h->addr;
-  CUDA_SAFE_CALL(cudaMemcpy(lat->h->data->u_ptr,
-			    lat->d_h->data->u_ptr,
-			    addr->n * DQ_d * sizeof(double),
-			    cudaMemcpyDeviceToHost));
-}
-
-void LatticeForceH2D(Lattice* lat) {
-  LatticeAddressing* addr = lat->h->addr;
-  CUDA_SAFE_CALL(cudaMemcpy(lat->d_h->data->force_ptr,
-			    lat->h->data->force_ptr,
-			    addr->n * DQ_d * sizeof(double),
-			    cudaMemcpyHostToDevice));
-}
-
-void LatticeForceD2H(Lattice* lat) {
-  LatticeAddressing* addr = lat->h->addr;
-  CUDA_SAFE_CALL(cudaMemcpy(lat->h->data->force_ptr,
-			    lat->d_h->data->force_ptr,
-			    addr->n * DQ_d * sizeof(double),
-			    cudaMemcpyDeviceToHost));
-}
-
-void LatticeFH2D(Lattice* lat) {
-  LatticeAddressing* addr = lat->h->addr;
-  CUDA_SAFE_CALL(cudaMemcpy(lat->d_h->data->f_current_ptr,
-			    lat->h->data->f_current_ptr,
-			    addr->n * DQ_q * sizeof(double),
-			    cudaMemcpyHostToDevice));
-}
-
-void LatticeFD2H(Lattice* lat) {
-  LatticeAddressing* addr = lat->h->addr;
-  CUDA_SAFE_CALL(cudaMemcpy(lat->h->data->f_current_ptr,
-			    lat->d_h->data->f_current_ptr,
-			    addr->n * DQ_q * sizeof(double),
-			    cudaMemcpyDeviceToHost));
-}
-
-void LatticeH2D(Lattice* lat) {
-  LatticeFH2D(lat);
-  LatticeRhoH2D(lat);
-  LatticeUH2D(lat);
-  LatticeForceH2D(lat);
-}
-
-void LatticeD2H(Lattice* lat) {
-  LatticeFD2H(lat);
-  LatticeRhoD2H(lat);
-  LatticeUD2H(lat);
-  LatticeForceD2H(lat);
-}
