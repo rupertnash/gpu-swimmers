@@ -1,4 +1,4 @@
-cdef extern from "lbswim/Shared.h":
+cdef extern from "Shared.h":
     cdef cppclass SharedArray[T]:
         T* host
         T* device

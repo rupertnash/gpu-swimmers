@@ -1,7 +1,7 @@
 from _shared cimport SharedArray
 from _lb cimport Lattice
 
-cdef extern from "lbswim/SwimmerArray.h":
+cdef extern from "SwimmerArray.h":
     cdef cppclass SwimmerArray:
         SwimmerArray(int n, double hydro)
         void AddForces(Lattice* lat)

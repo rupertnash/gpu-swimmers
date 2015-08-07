@@ -1,6 +1,6 @@
 from _shared cimport SharedArray, SharedItem
 
-cdef extern from "lbswim/lb.h":
+cdef extern from "lb.h":
     enum: DQ_d
     enum: DQ_q
     
