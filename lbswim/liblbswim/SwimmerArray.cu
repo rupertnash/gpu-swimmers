@@ -1,10 +1,25 @@
+#include <curand_kernel.h>
 #include "SwimmerArray.h"
 #include <math.h>
 
-SwimmerArray::SwimmerArray(int num_, double hydroRadius_) : 
-  num(num_), hydroRadius(hydroRadius_),
-  r(num_*DQ_d), v(num_*DQ_d), n(num_*DQ_d), P(num_), a(num_), l(num_)
+const int blockSize = 512;
+
+__global__ void DoInitPrng(const int nSwim,
+			   const unsigned long long seed,
+			   curandStateXORWOW* prngs) {
+  const int iSwim = threadIdx.x + blockIdx.x * blockDim.x;
+  /* If we're out of range, skip */
+  if (iSwim >= nSwim) return;
+  curand_init(seed, iSwim, 0, prngs+iSwim);
+}
+
+SwimmerArray::SwimmerArray(const int num_, const CommonParams* p) : 
+  num(num_), common(p),
+  r(num_*DQ_d), v(num_*DQ_d), n(num_*DQ_d),
+  prng(num)
 {
+  const int numBlocks = (num + blockSize - 1)/blockSize;
+  DoInitPrng<<<numBlocks, blockSize>>>(num, p->seed, prng.device);
 }
 
 __device__ double peskin_delta(double x) {
@@ -83,14 +98,13 @@ __device__ void AccumulateDeltaForce(const LatticeAddressing* addr, double* lat_
 }
 
 
-__global__ void DoSwimmerArrayAddForces(const int nSwim, 
+__global__ void DoSwimmerArrayAddForces(const int nSwim,
+					const CommonParams* p,
 					const double* swim_r,
 					const double* swim_n,
-					const double* swim_l,
-					const double* swim_P,
 					const LatticeAddressing* addr,
 					double* lat_force) {
-  int iSwim = threadIdx.x + blockIdx.x * blockDim.x;
+  const int iSwim = threadIdx.x + blockIdx.x * blockDim.x;
   /* If we're out of range, skip */
   if (iSwim >= nSwim) return;
   
@@ -101,8 +115,8 @@ __global__ void DoSwimmerArrayAddForces(const int nSwim,
   double force[DQ_d];
   
   for (a=0; a<DQ_d; a++) {
-    r[a] = swim_r[nSwim*a + iSwim] - swim_n[nSwim*a + iSwim] * swim_l[iSwim];
-    force[a] = -swim_P[iSwim] * swim_n[nSwim*a + iSwim];
+    r[a] = swim_r[nSwim*a + iSwim] - swim_n[nSwim*a + iSwim] * p->l;
+    force[a] = -p->P * swim_n[nSwim*a + iSwim];
   }
   AccumulateDeltaForce(addr, lat_force, r, force);
   
@@ -116,13 +130,12 @@ __global__ void DoSwimmerArrayAddForces(const int nSwim,
   AccumulateDeltaForce(addr, lat_force, r, force);
 }
 
-void SwimmerArray::AddForces(Lattice* lat) {
-  const int blockSize = 512;
+void SwimmerArray::AddForces(Lattice* lat) const {
   const int numBlocks = (num + blockSize - 1)/blockSize;
 
   DoSwimmerArrayAddForces<<<numBlocks, blockSize>>>(num,
+						    common.device,
 						    r.device, n.device,
-						    l.device, P.device,
 						    lat->addr.device, lat->data->force.device);
 }
 
@@ -168,13 +181,11 @@ __device__ void InterpVelocity(const LatticeAddressing* addr,
 }
 
 __global__ void DoSwimmerArrayMove(const int nSwim,
-				   const double hydroRadius,
+				   const CommonParams* common,
 				   double* swim_r,
 				   double* swim_v,
 				   double* swim_n,
-				   const double* swim_P,
-				   const double* swim_a,
-				   const double* swim_l,
+				   RandState* swim_prng,
 				   const LatticeAddressing* addr,
 				   const LBParams* params,
 				   const double* lat_u) {
@@ -200,22 +211,11 @@ __global__ void DoSwimmerArrayMove(const int nSwim,
   double rMinus[DQ_d];
   
   for (int d=0; d<DQ_d; d++) {
-    rDot[d] = swim_P[iSwim] * swim_n[nSwim*d + iSwim];
-    rDot[d] *= (1./swim_a[iSwim] - 1./hydroRadius) / (6. * M_PI * eta);
+    rDot[d] = common->P * swim_n[nSwim*d + iSwim];
+    rDot[d] *= (1./common->a - 1./common->hydroRadius) / (6. * M_PI * eta);
     rDot[d] += v[d];
     
-    rMinus[d] = r[d] - swim_n[nSwim*d + iSwim] * swim_l[iSwim];
-  }
-  
-  double vMinus[DQ_d];
-  InterpVelocity(addr, lat_u, rMinus, vMinus);
-
-  double nDot[DQ_d];
-  for (int d=0; d<DQ_d; d++) {
-    nDot[d] = v[d] - vMinus[d];
-    /* now nDot = v(rPlus) - v(rMinus) */
-    /* so divide by l to get the rate */
-    nDot[d] /= swim_l[iSwim];
+    rMinus[d] = r[d] - swim_n[nSwim*d + iSwim] * common->l;
   }
   
   /* self.applyMove(lattice, rDot) */
@@ -227,28 +227,53 @@ __global__ void DoSwimmerArrayMove(const int nSwim,
     /* deal with PBC */
     swim_r[nSwim*d + iSwim] = fmod(r[d] + size[d], size[d]);
   }
-
-  /* self.applyTurn(lattice, nDot) */
+  
   double newn[DQ_d];
-  double norm = 0.0;
-  for (int d=0; d<DQ_d; d++) {
-    newn[d] =  swim_n[nSwim*d + iSwim] + nDot[d];
-    norm += newn[d]*newn[d];
+  double norm;
+  
+  float rand = curand_uniform(swim_prng + iSwim);
+  if (rand < common->alpha) {
+    // Tumble - i.e. pick a random unit vector
+    // Pick a point from a Gaussian distribution and normalise it
+    // We'll do the norm below.
+    for (int d=0; d<DQ_d; d++) {
+      newn[d] = curand_normal_double(swim_prng + iSwim);
+      norm += newn[d]*newn[d];
+    }
+
+  } else {
+    // Normal rotation
+    double vMinus[DQ_d];
+    InterpVelocity(addr, lat_u, rMinus, vMinus);
+    
+    double nDot[DQ_d];
+    for (int d=0; d<DQ_d; d++) {
+      nDot[d] = v[d] - vMinus[d];
+      /* now nDot = v(rPlus) - v(rMinus) */
+      /* so divide by l to get the rate */
+      nDot[d] /= common->l;
+    }
+    
+    /* self.applyTurn(lattice, nDot) */
+    
+    for (int d=0; d<DQ_d; d++) {
+      newn[d] =  swim_n[nSwim*d + iSwim] + nDot[d];
+      norm += newn[d]*newn[d];
+    }
   }
+
   norm = sqrt(norm);
   for (int d=0; d<DQ_d; d++) {
     swim_n[nSwim*d + iSwim] = newn[d] / norm;
   }
-
 }
 
 void SwimmerArray::Move(Lattice* lat) {
-  const int blockSize = 512;
   const int numBlocks = (num + blockSize - 1)/blockSize;
   
-  DoSwimmerArrayMove<<<numBlocks, blockSize>>>(num, hydroRadius,
-					       r.device, v.device, v.device,
-					       P.device, a.device, l.device,
+  DoSwimmerArrayMove<<<numBlocks, blockSize>>>(num, common.device,
+					       r.device, v.device, n.device,
+					       prng.device,
 					       lat->addr.device,
 					       lat->params.device,
 					       lat->data->u.device);

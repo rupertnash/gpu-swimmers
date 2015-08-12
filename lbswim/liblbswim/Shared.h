@@ -18,6 +18,7 @@ struct SharedItem {
   T* host;
   T* device;
   SharedItem();
+  SharedItem(const T* init);
   ~SharedItem();
   void H2D();
   void D2H();

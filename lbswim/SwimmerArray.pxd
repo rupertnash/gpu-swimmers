@@ -1,17 +1,25 @@
-from _shared cimport SharedArray
+from _shared cimport SharedArray, SharedItem
 from _lb cimport Lattice
 
 cdef extern from "SwimmerArray.h":
+    cdef cppclass RandState:
+        pass
+    cdef cppclass CommonParams:
+        double P
+        double a
+        double l
+        double hydroRadius
+        double alpha
+        unsigned long long seed
+        
+        pass
     cdef cppclass SwimmerArray:
-        SwimmerArray(int n, double hydro)
+        SwimmerArray(int n, CommonParams* p)
         void AddForces(Lattice* lat)
         void Move(Lattice* lat)
         int num
-        double hydroRadius
+        SharedItem[CommonParams] common
         SharedArray[double] r
         SharedArray[double] v
         SharedArray[double] n
-        SharedArray[double] P
-        SharedArray[double] a
-        SharedArray[double] l
-
+        SharedArray[RandState] prng

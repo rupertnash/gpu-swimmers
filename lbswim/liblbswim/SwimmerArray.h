@@ -3,18 +3,29 @@
 
 #include "Lattice.h"
 
+typedef struct curandStateXORWOW RandState;
+//struct curandState_t;
+
+struct CommonParams {
+  double P;
+  double a;
+  double l;
+  double hydroRadius;
+  double alpha;
+  unsigned long long seed;
+};
+
 struct SwimmerArray {
-  SwimmerArray(int n, double hydro);
-  void AddForces(Lattice* lat);
+  SwimmerArray(const int n, const CommonParams* p);
+  void AddForces(Lattice* lat) const;
   void Move(Lattice* lat);
   int num;
-  double hydroRadius;
+  SharedItem<CommonParams> common;
   SharedArray<double> r;
   SharedArray<double> v;
   SharedArray<double> n;
-  SharedArray<double> P;
-  SharedArray<double> a;
-  SharedArray<double> l;
+  SharedArray<RandState> prng;
+  //SharedItem<struct curandState_t> prng;
 };
 
 

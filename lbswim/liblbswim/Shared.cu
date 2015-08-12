@@ -32,7 +32,15 @@ SharedItem<T>::SharedItem() {
   CUDA_SAFE_CALL(cudaMalloc(&device, sizeof(T)));
 }
 template <typename T>
+SharedItem<T>::SharedItem(const T* init) {
+  host = new T;
+  *host = *init;
+  CUDA_SAFE_CALL(cudaMalloc(&device, sizeof(T)));
+  H2D();
+}
+template <typename T>
 SharedItem<T>::~SharedItem() {
+  delete host;
   CUDA_SAFE_CALL(cudaFree(device));
 }
 template <typename T>

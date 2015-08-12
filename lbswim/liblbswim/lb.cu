@@ -36,7 +36,7 @@ LDView LatticeData::Device(){
 }
 
 //template void SharedArray<double>::H2D();
-template class SharedArray<double>;
+//template class SharedArray<double>;
 Lattice::Lattice(int nx, int ny, int nz, double tau_s, double tau_b) : time_step(0) {
   // Set up params and move to device
   params.host->tau_s = tau_s;
