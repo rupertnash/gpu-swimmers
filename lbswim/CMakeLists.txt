@@ -12,12 +12,14 @@ set_source_files_properties(${PYX_SOURCES}
 
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/liblbswim ${NUMPY_INCLUDE_DIRS})
 
-foreach(basename shared lb swimmers)
+foreach(basename shared lb swimmers tracers)
   cython_add_module(${basename} ${basename}.pyx)
   target_link_libraries(${basename} lbswim)
   install(TARGETS ${basename}
     DESTINATION ${_INST_DIR})
 endforeach(basename)
 
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/__init__.py
-  DESTINATION ${_INST_DIR})
+foreach(py_mod __init__ System)
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${py_mod}.py
+    DESTINATION ${_INST_DIR})
+endforeach()

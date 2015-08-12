@@ -16,6 +16,7 @@ struct CommonParams {
 };
 
 struct SwimmerArray {
+  static const int BlockSize = 512;
   SwimmerArray(const int n, const CommonParams* p);
   void AddForces(Lattice* lat) const;
   void Move(Lattice* lat);

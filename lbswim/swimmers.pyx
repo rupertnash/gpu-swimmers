@@ -106,16 +106,3 @@ cdef class Array:
     @property
     def common(self):
         return self._common
-
-class System(object):
-    def __init__(self, lat, sw):
-        self.lat = lat
-        self.sw = sw
-        
-    def Step(self):
-        self.lat.ZeroForce()
-        self.sw.AddForces(self.lat)
-        self.lat.Step()
-        self.lat.CalcHydro()
-        self.sw.Move(self.lat)
-    pass

@@ -1,8 +1,8 @@
 #include <curand_kernel.h>
 #include "SwimmerArray.h"
 #include <math.h>
-
-const int blockSize = 512;
+#include "delta.cu"
+#include "interp.cu"
 
 __global__ void DoInitPrng(const int nSwim,
 			   const unsigned long long seed,
@@ -18,29 +18,8 @@ SwimmerArray::SwimmerArray(const int num_, const CommonParams* p) :
   r(num_*DQ_d), v(num_*DQ_d), n(num_*DQ_d),
   prng(num)
 {
-  const int numBlocks = (num + blockSize - 1)/blockSize;
-  DoInitPrng<<<numBlocks, blockSize>>>(num, p->seed, prng.device);
-}
-
-__device__ double peskin_delta(double x) {
-  double abs_x = fabs(x);
-  double root = -4. * x*x;
-  double phi = -2.* abs_x;
-  
-  if (abs_x >= 2.0)
-    return 0.;
-  
-  if (abs_x >= 1.0) {
-    root += 12. * abs_x - 7.;
-    phi += 5.;
-    phi -= sqrt(root);
-  } else {
-    root += 4. * abs_x + 1;
-    phi += 3.;
-    phi += sqrt(root);
-  }
-  return 0.125 * phi;
-
+  const int numBlocks = (num + BlockSize - 1)/BlockSize;
+  DoInitPrng<<<numBlocks, BlockSize>>>(num, p->seed, prng.device);
 }
 
 __device__ double atomicAdd(double* address, double val) {
@@ -131,53 +110,12 @@ __global__ void DoSwimmerArrayAddForces(const int nSwim,
 }
 
 void SwimmerArray::AddForces(Lattice* lat) const {
-  const int numBlocks = (num + blockSize - 1)/blockSize;
+  const int numBlocks = (num + BlockSize - 1)/BlockSize;
 
-  DoSwimmerArrayAddForces<<<numBlocks, blockSize>>>(num,
+  DoSwimmerArrayAddForces<<<numBlocks, BlockSize>>>(num,
 						    common.device,
 						    r.device, n.device,
 						    lat->addr.device, lat->data->force.device);
-}
-
-__device__ void InterpVelocity(const LatticeAddressing* addr,
-			       const double* lat_u,
-			       const double* r,
-			       double* v) {
-  const int* n = addr->size;
-  int indices[DQ_d][4];
-  double deltas[DQ_d][4];
-  double delta3d;
-  double x, x0;
-  int d;
-  int i,j,k;
-
-  /* zero the output */
-  v[0] = v[1] = v[2] = 0.0;
-
-  for (d=0; d<DQ_d; d++) {
-    x0 = ceil(r[d]-2.);
-    for (i=0; i<4; i++) {
-      x = x0+i;
-      indices[d][i] = ((int)x + n[d]) % n[d];
-      deltas[d][i] = peskin_delta(r[d]-x);
-    }
-  }
-
-  for (i=0; i<4; ++i) {
-    for (j=0; j<4; ++j) {
-      for (k=0; k<4; ++k) {
-	/* evaluate the delta function */
-	delta3d = deltas[DQ_X][i] * deltas[DQ_Y][j] * deltas[DQ_Z][k];
-	int ijk = (addr->strides[DQ_X]*indices[DQ_X][i] +
-		   addr->strides[DQ_Y]*indices[DQ_Y][j] +
-		   addr->strides[DQ_Z]*indices[DQ_Z][k]);
-	for (d=0; d<3; ++d) {
-	  v[d] += delta3d * lat_u[d*addr->n + ijk];
-	}
-      }
-    }
-  }
-  
 }
 
 __global__ void DoSwimmerArrayMove(const int nSwim,
@@ -269,9 +207,9 @@ __global__ void DoSwimmerArrayMove(const int nSwim,
 }
 
 void SwimmerArray::Move(Lattice* lat) {
-  const int numBlocks = (num + blockSize - 1)/blockSize;
+  const int numBlocks = (num + BlockSize - 1)/BlockSize;
   
-  DoSwimmerArrayMove<<<numBlocks, blockSize>>>(num, common.device,
+  DoSwimmerArrayMove<<<numBlocks, BlockSize>>>(num, common.device,
 					       r.device, v.device, n.device,
 					       prng.device,
 					       lat->addr.device,
