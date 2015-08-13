@@ -37,6 +37,7 @@ This is then wrapped by Cython and made available in Python as the package `lbsw
 * Lattice sites run from (0, SIZE-1) not (1, SIZE)
 * Particle positions run from [0., SIZE)
 * All vector data is laid out with the element index being slowest varying. I.e. a three vector is laid out as [x0, x1, ..., xn-1, y0, y1, .. yn-1, z0, z1, zn-1]
+* Must manually move data between host and device
 * Pickling of objects is not implemented yet
 
 ## Usage
