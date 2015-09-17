@@ -35,7 +35,7 @@ __global__ void DoTracerArrayMove(const int nPart,
     part_v[nPart*d + iPart] = v[d];
     r[d] += v[d];
     /* deal with PBC */
-    part_r[nPart*d + iPart] = fmod(r[d] + size[d], size[d]);
+    part_r[nPart*d + iPart] = fmod(r[d] + size[d], double(size[d]));
   }
 }
 

@@ -163,7 +163,7 @@ __global__ void DoSwimmerArrayMove(const int nSwim,
     /* new position */
     r[d] += rDot[d];
     /* deal with PBC */
-    swim_r[nSwim*d + iSwim] = fmod(r[d] + size[d], size[d]);
+    swim_r[nSwim*d + iSwim] = fmod(r[d] + size[d], double(size[d]));
   }
   
   double newn[DQ_d];
