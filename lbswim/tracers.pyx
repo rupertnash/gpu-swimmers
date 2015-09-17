@@ -34,3 +34,15 @@ cdef class Array:
     @property
     def v(self):
         return self._v
+    def __reduce__(self):
+        self.D2H()
+        array_data = (self._r.data, self._v.data)
+        return (Array,
+                (self.impl.num,),
+                array_data)
+    
+    def __setstate__(self, data):
+        r, v = data
+        self._r.data[:] = r[:]
+        self._v.data[:] = v[:]
+        self.H2D()

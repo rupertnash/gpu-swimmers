@@ -170,9 +170,10 @@ cdef class Lattice:
     
     @property
     def addr(self):
-        ans = LatticeAddressing()
-        ans.impl = self.impl.addr.host
-        return ans
+        if self._addr is None:
+            self._addr = LatticeAddressing()
+            self._addr.impl = self.impl.addr.host
+        return self._addr
     
     @property
     def params(self):
@@ -216,3 +217,25 @@ cdef class Lattice:
             raw = shared.Array().init(self, cython.address(self.impl.data.fNew))
             self._fNew = SharedLatticeArray(self, raw)
         return self._fNew
+
+    def __reduce__(self):
+        """Implement pickle protocol for extension classes.
+        Return 3-tuple of (constructor, ctor_args, setstate_args)
+        """
+        cdef int* size = self.impl.addr.host.size
+        cdef _lb.LBParams* p = self.impl.params.host
+        init_args = (size[0], size[1], size[2], p.tau_s, p.tau_b)
+
+        # fOld is the only array that really matters, the rest can be recomputed
+        self.fOld.D2H()
+        f_data = self.fOld.data
+        
+        return (self.__class__,
+                init_args,
+                f_data)
+
+    def __setstate__(self, file_f_data):
+        my_f_data = self.fOld.data
+        my_f_data[:] = file_f_data[:]
+        self.fOld.H2D()
+        

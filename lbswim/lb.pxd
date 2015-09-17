@@ -30,3 +30,4 @@ cdef class Lattice:
     cdef SharedLatticeArray _force
     cdef SharedLatticeArray _fOld
     cdef SharedLatticeArray _fNew
+    cdef LatticeAddressing _addr

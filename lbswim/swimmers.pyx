@@ -106,3 +106,17 @@ cdef class Array:
     @property
     def common(self):
         return self._common
+
+    def __reduce__(self):
+        self.D2H()
+        array_data = (self._r.data, self._v.data, self._n.data)
+        return (Array,
+                (self.impl.num, self._common),
+                array_data)
+    
+    def __setstate__(self, data):
+        r, v, n = data
+        self._r.data[:] = r[:]
+        self._v.data[:] = v[:]
+        self._n.data[:] = n[:]
+        self.H2D()
