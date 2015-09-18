@@ -228,13 +228,17 @@ cdef class Lattice:
 
         # fOld is the only array that really matters, the rest can be recomputed
         self.fOld.D2H()
-        f_data = self.fOld.data
+        data = (self.impl.time_step, self.fOld.data)
         
         return (self.__class__,
                 init_args,
-                f_data)
+                data)
 
-    def __setstate__(self, file_f_data):
+    def __setstate__(self, data):
+        ts, file_f_data = data
+        
+        self.impl.time_step = ts
+        
         my_f_data = self.fOld.data
         my_f_data[:] = file_f_data[:]
         self.fOld.H2D()
