@@ -38,7 +38,7 @@ __global__ void DoTracerArrayMove(const int nPart,
     /* deal with PBC */
     part_r[nPart*d + iPart] = fmod(r[d] + size[d], double(size[d]));
     /* and then update the unwrapped coords */
-    s[d] += v[d];
+    part_s[d] += v[d];
   }
 }
 
