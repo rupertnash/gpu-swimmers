@@ -7,4 +7,5 @@ cdef extern from "TracerArray.h":
         void Move(Lattice* lat)
         int num
         SharedArray[double] r
+        SharedArray[double] s
         SharedArray[double] v

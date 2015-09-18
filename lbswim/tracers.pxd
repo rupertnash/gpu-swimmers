@@ -8,4 +8,5 @@ cdef class Array:
 
     cdef TracerArray.TracerArray* impl
     cdef shared.Array _r
+    cdef shared.Array _s
     cdef shared.Array _v

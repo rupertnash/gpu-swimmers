@@ -9,6 +9,7 @@ struct TracerArray {
   void Move(Lattice* lat);
   int num;
   SharedArray<double> r;
+  SharedArray<double> s;
   SharedArray<double> v;
 };
 

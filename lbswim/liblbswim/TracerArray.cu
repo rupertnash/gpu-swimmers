@@ -4,16 +4,17 @@
 
 TracerArray::TracerArray(const int num_) : 
   num(num_),
-  r(num_*DQ_d), v(num_*DQ_d)
+  r(num_*DQ_d), s(num*DQ_d), v(num_*DQ_d)
 {
 }
 
 
 __global__ void DoTracerArrayMove(const int nPart,
-				   double* part_r,
-				   double* part_v,
-				   const LatticeAddressing* addr,
-				   const double* lat_u) {
+				  double* part_r,
+				  double* part_s,
+				  double* part_v,
+				  const LatticeAddressing* addr,
+				  const double* lat_u) {
   /* Updates the positions using:
    *     Rdot = v(R) 
    * where v(R) is the interpolated velocity at the position of the
@@ -36,6 +37,8 @@ __global__ void DoTracerArrayMove(const int nPart,
     r[d] += v[d];
     /* deal with PBC */
     part_r[nPart*d + iPart] = fmod(r[d] + size[d], double(size[d]));
+    /* and then update the unwrapped coords */
+    s[d] += v[d];
   }
 }
 
@@ -43,7 +46,7 @@ void TracerArray::Move(Lattice* lat) {
   const int numBlocks = (num + BlockSize - 1)/BlockSize;
   
   DoTracerArrayMove<<<numBlocks, BlockSize>>>(num,
-					      r.device, v.device,
+					      r.device, s.device, v.device,
 					      lat->addr.device,
 					      lat->data->u.device);
 }
