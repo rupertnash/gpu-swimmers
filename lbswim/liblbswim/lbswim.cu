@@ -4,4 +4,5 @@
 #include "SwimmerArray.cu"
 #include "TracerArray.cu"
 template class SharedArray<double>;
+template class SharedArray<RandState>;
 template class SharedItem<CommonParams>;

@@ -59,7 +59,29 @@ cdef class CommonParams:
         def __set__(self, unsigned long long seed):
             self.impl.host.seed = seed
             self.impl.H2D()
-
+    
+    def __reduce__(self):
+        params = {}
+        params['P'] = self.impl.host.P 
+        params['a'] = self.impl.host.a
+        params['l'] = self.impl.host.l
+        params['hydroRadius'] = self.impl.host.hydroRadius
+        params['alpha'] = self.impl.host.alpha
+        params['seed'] = self.impl.host.seed
+        
+        return (CommonParams,
+                (),
+                params)
+    
+    def __setstate__(self, params):
+        self.impl.host.P = params['P']
+        self.impl.host.a = params['a']
+        self.impl.host.l = params['l']
+        self.impl.host.hydroRadius = params['hydroRadius']
+        self.impl.host.alpha = params['alpha']
+        self.impl.host.seed = params['seed']
+        self.impl.H2D()
+        
 cdef class Array:
     def __cinit__(self, int n, CommonParams cp):
         self.impl = new SwimmerArray.SwimmerArray(n, cp.impl.host)
@@ -87,12 +109,14 @@ cdef class Array:
         self._r.H2D()
         self._v.H2D()
         self._n.H2D()
+        self.impl.prng.H2D()
         
     def D2H(self):
         self._r.D2H()
         self._v.D2H()
         self._n.D2H()
-
+        self.impl.prng.D2H()
+    
     @property
     def r(self):
         return self._r
@@ -109,6 +133,7 @@ cdef class Array:
 
     def __reduce__(self):
         self.D2H()
+        print cython.sizeof(SwimmerArray.RandState)
         array_data = (self._r.data, self._v.data, self._n.data)
         return (Array,
                 (self.impl.num, self._common),

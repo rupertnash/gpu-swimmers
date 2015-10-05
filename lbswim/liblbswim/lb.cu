@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "lb.h"
+#include "Lattice.h"
 #include "d3q15.h"
 #include "cucall.h"
 

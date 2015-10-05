@@ -20,6 +20,8 @@ SwimmerArray::SwimmerArray(const int num_, const CommonParams* p) :
 {
   const int numBlocks = (num + BlockSize - 1)/BlockSize;
   DoInitPrng<<<numBlocks, BlockSize>>>(num, p->seed, prng.device);
+  // pull state to host
+  prng.D2H();
 }
 
 __device__ double atomicAdd(double* address, double val) {

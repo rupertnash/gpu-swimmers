@@ -2,9 +2,8 @@
 #define SWIMMER_ARRAY_H
 
 #include "Lattice.h"
-
+#include <curand_kernel.h>
 typedef struct curandStateXORWOW RandState;
-//struct curandState_t;
 
 struct CommonParams {
   double P;
@@ -26,7 +25,6 @@ struct SwimmerArray {
   SharedArray<double> v;
   SharedArray<double> n;
   SharedArray<RandState> prng;
-  //SharedItem<struct curandState_t> prng;
 };
 
 
