@@ -133,7 +133,6 @@ cdef class Array:
 
     def __reduce__(self):
         self.D2H()
-        print cython.sizeof(SwimmerArray.RandState)
         array_data = (self._r.data, self._v.data, self._n.data)
         return (Array,
                 (self.impl.num, self._common),

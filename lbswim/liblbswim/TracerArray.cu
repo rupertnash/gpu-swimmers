@@ -4,7 +4,7 @@
 
 TracerArray::TracerArray(const int num_) : 
   num(num_),
-  r(num_*DQ_d), s(num*DQ_d), v(num_*DQ_d)
+  r(num_*DQ_d), s(num_*DQ_d), v(num_*DQ_d)
 {
 }
 
