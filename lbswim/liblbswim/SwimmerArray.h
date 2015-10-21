@@ -7,10 +7,11 @@ typedef struct curandStateXORWOW RandState;
 
 struct CommonParams {
   double P;
-  double a;
   double l;
-  double hydroRadius;
   double alpha;
+  double mobility;
+  bool translational_advection_off;
+  bool rotational_advection_off;
   unsigned long long seed;
 };
 

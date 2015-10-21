@@ -127,7 +127,6 @@ __global__ void DoSwimmerArrayMove(const int nSwim,
 				   double* swim_n,
 				   RandState* swim_prng,
 				   const LatticeAddressing* addr,
-				   const LBParams* params,
 				   const double* lat_u) {
   /* Updates the swimmers' positions using:
    *     Rdot = v(R) + Fn_/(6 pi eta a)
@@ -143,7 +142,6 @@ __global__ void DoSwimmerArrayMove(const int nSwim,
   double r[DQ_d] = {swim_r[nSwim*DQ_X + iSwim],
 		    swim_r[nSwim*DQ_Y + iSwim],
 		    swim_r[nSwim*DQ_Z + iSwim]};
-  const double eta = params->tau_s*params->cs2;
 
   InterpVelocity(addr, lat_u, r, v);
   
@@ -151,9 +149,10 @@ __global__ void DoSwimmerArrayMove(const int nSwim,
   double rMinus[DQ_d];
   
   for (int d=0; d<DQ_d; d++) {
-    rDot[d] = common->P * swim_n[nSwim*d + iSwim];
-    rDot[d] *= (1./common->a - 1./common->hydroRadius) / (6. * M_PI * eta);
-    rDot[d] += v[d];
+    rDot[d] = common->mobility * common->P * swim_n[nSwim*d + iSwim];
+
+    if (!common->translational_advection_off)
+      rDot[d] += v[d];
     
     rMinus[d] = r[d] - swim_n[nSwim*d + iSwim] * common->l;
   }
@@ -181,7 +180,7 @@ __global__ void DoSwimmerArrayMove(const int nSwim,
       norm += newn[d]*newn[d];
     }
 
-  } else {
+  } else if (!common->rotational_advection_off){
     // Normal rotation
     double vMinus[DQ_d];
     InterpVelocity(addr, lat_u, rMinus, vMinus);
@@ -200,6 +199,8 @@ __global__ void DoSwimmerArrayMove(const int nSwim,
       newn[d] =  swim_n[nSwim*d + iSwim] + nDot[d];
       norm += newn[d]*newn[d];
     }
+  } else {
+    // Do nothing if rotational advection is off
   }
 
   norm = sqrt(norm);
@@ -215,6 +216,5 @@ void SwimmerArray::Move(Lattice* lat) {
 					       r.device, v.device, n.device,
 					       prng.device,
 					       lat->addr.device,
-					       lat->params.device,
 					       lat->data->u.device);
 }

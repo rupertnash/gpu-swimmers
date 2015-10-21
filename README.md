@@ -47,11 +47,13 @@ This is then wrapped by Cython and made available in Python as the package `lbsw
 2. Create any swimmers needed.
   1. Create a CommonParams object and set the values
     * P - propelling force
-    * a - body radius
     * l - swimmer length
-    * hydroRadius - correction
     * alpha - tumble probabilty
+    * mobility - swimmer self mobility - see below.
+    * translational_advection_off - flag to turn off advection of swimmers by fluid
+    * rotational_advection_off - flag to turn off rotation of swimmers by fluid
     * seed - seed for the random number generator
+    The mobility is typically  (1 / a - 1/ hydro) / (6 pi eta), where a = nominal body size, hydro = correction and eta = fluid viscosity.
   2. Create the arrays with `SwimmerArray(nSwim, params)`
   3. Set the host copies of variables (noting that the data is laid out with shape (NDIMS, NSWIM):
     * r - position
@@ -96,10 +98,14 @@ system = System(lat)
 
 cp = swimmers.CommonParams()
 cp.P = 1e-3
-cp.a = 0.1
 cp.l = 0.1
 cp.alpha = 0.01
-cp.hydroRadius = 1.5
+
+a = 0.1
+hydroRadius = 1.5
+cp.mobility = (1.0 / a - 1.0 / hydroRadius) / (6.0 * np.pi * eta)
+cp.translational_advection_off = False
+cp.rotational_advection_off = False
 cp.seed = 1234
 sw = swimmers.Array(1, cp)
 sw.r[:] = 8

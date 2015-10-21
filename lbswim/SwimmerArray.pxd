@@ -6,10 +6,11 @@ cdef extern from "SwimmerArray.h":
         pass
     cdef cppclass CommonParams:
         double P
-        double a
         double l
-        double hydroRadius
         double alpha
+        double mobility
+        bint translational_advection_off
+        bint rotational_advection_off
         unsigned long long seed
         
         pass

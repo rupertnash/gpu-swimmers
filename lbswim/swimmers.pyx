@@ -25,13 +25,6 @@ cdef class CommonParams:
             self.impl.host.P = P
             self.impl.H2D()
 
-    property a:
-        def __get__(self):
-            return self.impl.host.a
-        def __set__(self, double a):
-            self.impl.host.a = a
-            self.impl.H2D()
-
     property l:
         def __get__(self):
             return self.impl.host.l
@@ -39,18 +32,32 @@ cdef class CommonParams:
             self.impl.host.l = l
             self.impl.H2D()
 
-    property hydroRadius:
-        def __get__(self):
-            return self.impl.host.hydroRadius
-        def __set__(self, double hydroRadius):
-            self.impl.host.hydroRadius = hydroRadius
-            self.impl.H2D()
-    
     property alpha:
         def __get__(self):
             return self.impl.host.alpha
         def __set__(self, double alpha):
             self.impl.host.alpha = alpha
+            self.impl.H2D()
+
+    property mobility:
+        def __get__(self):
+            return self.impl.host.mobility
+        def __set__(self, double mobility):
+            self.impl.host.mobility = mobility
+            self.impl.H2D()
+
+    property translational_advection_off:
+        def __get__(self):
+            return self.impl.host.translational_advection_off
+        def __set__(self, bint translational_advection_off):
+            self.impl.host.translational_advection_off = translational_advection_off
+            self.impl.H2D()
+
+    property rotational_advection_off:
+        def __get__(self):
+            return self.impl.host.rotational_advection_off
+        def __set__(self, bint rotational_advection_off):
+            self.impl.host.rotational_advection_off = rotational_advection_off
             self.impl.H2D()
 
     property seed:
@@ -63,10 +70,11 @@ cdef class CommonParams:
     def __reduce__(self):
         params = {}
         params['P'] = self.impl.host.P 
-        params['a'] = self.impl.host.a
         params['l'] = self.impl.host.l
-        params['hydroRadius'] = self.impl.host.hydroRadius
         params['alpha'] = self.impl.host.alpha
+        params['mobility'] = self.impl.host.mobility
+        params['translational_advection_off'] = self.impl.host.translational_advection_off
+        params['rotational_advection_off'] = self.impl.host.rotational_advection_off
         params['seed'] = self.impl.host.seed
         
         return (CommonParams,
@@ -75,10 +83,11 @@ cdef class CommonParams:
     
     def __setstate__(self, params):
         self.impl.host.P = params['P']
-        self.impl.host.a = params['a']
         self.impl.host.l = params['l']
-        self.impl.host.hydroRadius = params['hydroRadius']
         self.impl.host.alpha = params['alpha']
+        self.impl.host.mobility = params['mobility']
+        self.impl.host.translational_advection_off = params['translational_advection_off']
+        self.impl.host.rotational_advection_off = params['rotational_advection_off']
         self.impl.host.seed = params['seed']
         self.impl.H2D()
         
