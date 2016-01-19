@@ -1,3 +1,4 @@
+// -*- mode: C++; -*-
 #ifndef D3Q15_H
 #define D3Q15_H
 

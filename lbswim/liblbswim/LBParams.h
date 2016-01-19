@@ -1,3 +1,4 @@
+// -*- mode: C++; -*-
 #ifndef LBPARAMS_H
 #define LBPARAMS_H
 

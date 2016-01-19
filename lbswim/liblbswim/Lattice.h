@@ -1,3 +1,4 @@
+// -*- mode: C++; -*-
 #ifndef DQ_Lattice_H
 #define DQ_Lattice_H
 
@@ -10,22 +11,6 @@ struct LatticeAddressing {
   int strides[DQ_d];
   int n;
 };
-
-// struct LatticeArrays {
-//   /* Pointers to the distribution function array etc
-//    */
-//   double *f_current_ptr;
-//   double *f_new_ptr;
-//   double *rho_ptr;
-//   double *u_ptr;
-//   double *force_ptr;  
-// };
-
-// struct LatticeImpl {
-//   LBParams* params;
-//   LatticeAddressing* addr;
-//   LatticeArrays* data;
-// };
 
 struct LDView {
   double* rho;

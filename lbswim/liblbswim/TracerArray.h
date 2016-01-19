@@ -1,3 +1,4 @@
+// -*- mode: C++; -*-
 #ifndef TRACER_ARRAY_H
 #define TRACER_ARRAY_H
 

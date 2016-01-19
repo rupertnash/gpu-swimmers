@@ -1,3 +1,4 @@
+// -*- mode: C++; -*-
 #ifndef SWIMMER_ARRAY_H
 #define SWIMMER_ARRAY_H
 

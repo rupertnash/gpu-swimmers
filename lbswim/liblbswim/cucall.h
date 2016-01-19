@@ -1,3 +1,4 @@
+// -*- mode: C++; -*-
 #ifndef CUCALL_H
 #define CUCALL_H
 #include <iostream>
