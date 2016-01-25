@@ -1,5 +1,6 @@
 
-void LatticeEigenSet(LBParams* lat) {
+void LatticeEigenSet(LBParams& latref) {
+  LBParams* lat = & latref;
 /* speed of sound */
 lat->cs2 = 1./3.;
 

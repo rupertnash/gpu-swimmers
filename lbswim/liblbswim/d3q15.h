@@ -30,6 +30,6 @@
 
 #include "LBParams.h"
 
-void LatticeEigenSet(LBParams* lat);
+void LatticeEigenSet(LBParams& lat);
 
 #endif

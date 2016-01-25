@@ -2,6 +2,8 @@
 #ifndef LBPARAMS_H
 #define LBPARAMS_H
 
+#include "dq.h"
+
 typedef struct LBParams {
   /* speed of sound, squared */
   double cs2;

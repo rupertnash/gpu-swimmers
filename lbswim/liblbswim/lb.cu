@@ -1,3 +1,4 @@
+// -*- mode: C++; -*-
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -37,34 +38,22 @@ LDView LatticeData::Device(){
 
 //template void SharedArray<double>::H2D();
 //template class SharedArray<double>;
-Lattice::Lattice(int nx, int ny, int nz, double tau_s, double tau_b) : time_step(0) {
+Lattice::Lattice(int nx, int ny, int nz, double tau_s, double tau_b) : time_step(0), addr(nx, ny, nz), data(*addr) {
   // Set up params and move to device
-  params.host->tau_s = tau_s;
-  params.host->tau_b = tau_b;
-  LatticeEigenSet(params.host);
+  params->tau_s = tau_s;
+  params->tau_b = tau_b;
+  LatticeEigenSet(*params);
 
   params.H2D();
   
-  // Set up addressing and move to device
-  addr.host->size[0] = nx;
-  addr.host->size[1] = ny;
-  addr.host->size[2] = nz;
-
-  addr.host->n = nx * ny * nz;
-
-  addr.host->strides[DQ_X] = ny * nz;
-  addr.host->strides[DQ_Y] = nz;
-  addr.host->strides[DQ_Z] = 1;
-
-  addr.H2D();
-  
   // Set up data arrays, but don't copy
-  data = new LatticeData(*addr.host);
+  // data = new LatticeData(*addr);
 }
 
 
 Lattice::~Lattice() {
-  delete data;}
+  
+}
 
 __constant__ double DQ_delta[DQ_d][DQ_d] = {{1.0, 0.0, 0.0},
 					    {0.0, 1.0, 0.0},
@@ -218,7 +207,7 @@ __global__ void DoStep(const LBParams* params,
 }
 
 void Lattice::Step() {
-  const int* lat_size = addr.host->size;
+  const int* lat_size = addr->size;
   const int bs = 8;
   
   dim3 block_shape;
@@ -231,17 +220,17 @@ void Lattice::Step() {
   num_blocks.y = (lat_size[DQ_Y] + block_shape.y - 1)/block_shape.y;
   num_blocks.z = (lat_size[DQ_Z] + block_shape.z - 1)/block_shape.z;
   
-  DoStep<<<num_blocks, block_shape>>>(params.device,
-				      addr.device,
-				      data->Device());
+  DoStep<<<num_blocks, block_shape>>>(params.Device(),
+				      addr.Device(),
+				      data.Device());
 
   /* Wait for completion */
   CUDA_SAFE_CALL(cudaDeviceSynchronize());
 
   /* Swap the f ptrs on the device */
-  double* tmp = data->fOld.device;
-  data->fOld.device = data->fNew.device;
-  data->fNew.device = tmp;
+  double* tmp = data.fOld.device;
+  data.fOld.device = data.fNew.device;
+  data.fNew.device = tmp;
 
   time_step++;
 }
@@ -295,7 +284,7 @@ __global__ void DoCalcHydro(const LBParams* params, const LatticeAddressing* add
 }
 
 void Lattice::CalcHydro() {
-  const int* lat_size = addr.host->size;
+  const int* lat_size = addr->size;
   const int bs = 8;
 
   dim3 block_shape;
@@ -308,7 +297,7 @@ void Lattice::CalcHydro() {
   num_blocks.y = (lat_size[DQ_Y] + block_shape.y - 1)/block_shape.y;
   num_blocks.z = (lat_size[DQ_Z] + block_shape.z - 1)/block_shape.z;
 
-  DoCalcHydro<<<num_blocks, block_shape>>>(params.device, addr.device, data->Device());
+  DoCalcHydro<<<num_blocks, block_shape>>>(params.Device(), addr.Device(), data.Device());
 }
 
 __global__ void DoInitFromHydro(const LBParams* params, const LatticeAddressing* addr, LDView data) {
@@ -371,7 +360,7 @@ __global__ void DoInitFromHydro(const LBParams* params, const LatticeAddressing*
 }
 
 void Lattice::InitFromHydro() {
-  const int* lat_size = addr.host->size;
+  const int* lat_size = addr->size;
   const int bs = 8;
 
   dim3 block_shape;
@@ -384,7 +373,7 @@ void Lattice::InitFromHydro() {
   num_blocks.y = (lat_size[DQ_Y] + block_shape.y - 1)/block_shape.y;
   num_blocks.z = (lat_size[DQ_Z] + block_shape.z - 1)/block_shape.z;
 
-  DoInitFromHydro<<<num_blocks, block_shape>>>(params.device, addr.device, data->Device());
+  DoInitFromHydro<<<num_blocks, block_shape>>>(params.Device(), addr.Device(), data.Device());
 }
 
 __global__ void DoLatticeZeroForce(const LBParams* params, const LatticeAddressing* addr, LDView data) {
@@ -411,7 +400,7 @@ __global__ void DoLatticeZeroForce(const LBParams* params, const LatticeAddressi
 }
 
 void Lattice::ZeroForce() {
-  const int* lat_size = addr.host->size;
+  const int* lat_size = addr->size;
   const int bs = 8;
 
   dim3 block_shape;
@@ -424,6 +413,6 @@ void Lattice::ZeroForce() {
   num_blocks.y = (lat_size[DQ_Y] + block_shape.y - 1)/block_shape.y;
   num_blocks.z = (lat_size[DQ_Z] + block_shape.z - 1)/block_shape.z;
 
-  DoLatticeZeroForce<<<num_blocks, block_shape>>>(params.device, addr.device, data->Device());
+  DoLatticeZeroForce<<<num_blocks, block_shape>>>(params.Device(), addr.Device(), data.Device());
 }
 

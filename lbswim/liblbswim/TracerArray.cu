@@ -1,3 +1,4 @@
+// -*- mode: C++; -*-
 #include "TracerArray.h"
 #include <math.h>
 #include "interp.cu"
@@ -47,6 +48,6 @@ void TracerArray::Move(Lattice* lat) {
   
   DoTracerArrayMove<<<numBlocks, BlockSize>>>(num,
 					      r.device, s.device, v.device,
-					      lat->addr.device,
-					      lat->data->u.device);
+					      lat->addr.Device(),
+					      lat->data.u.device);
 }

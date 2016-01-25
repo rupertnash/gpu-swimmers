@@ -1,3 +1,4 @@
+// -*- mode: C++; -*-
 #include <curand_kernel.h>
 #include "SwimmerArray.h"
 #include <math.h>
@@ -115,9 +116,9 @@ void SwimmerArray::AddForces(Lattice* lat) const {
   const int numBlocks = (num + BlockSize - 1)/BlockSize;
 
   DoSwimmerArrayAddForces<<<numBlocks, BlockSize>>>(num,
-						    common.device,
+						    common.Device(),
 						    r.device, n.device,
-						    lat->addr.device, lat->data->force.device);
+						    lat->addr.Device(), lat->data.force.device);
 }
 
 __global__ void DoSwimmerArrayMove(const int nSwim,
@@ -212,9 +213,9 @@ __global__ void DoSwimmerArrayMove(const int nSwim,
 void SwimmerArray::Move(Lattice* lat) {
   const int numBlocks = (num + BlockSize - 1)/BlockSize;
   
-  DoSwimmerArrayMove<<<numBlocks, BlockSize>>>(num, common.device,
+  DoSwimmerArrayMove<<<numBlocks, BlockSize>>>(num, common.Device(),
 					       r.device, v.device, n.device,
 					       prng.device,
-					       lat->addr.device,
-					       lat->data->u.device);
+					       lat->addr.Device(),
+					       lat->data.u.device);
 }

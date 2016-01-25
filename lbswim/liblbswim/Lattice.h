@@ -1,16 +1,12 @@
 // -*- mode: C++; -*-
-#ifndef DQ_Lattice_H
-#define DQ_Lattice_H
+#ifndef LATTICE_H
+#define LATTICE_H
 
-#include "d3q15.h"
+#include "dq.h"
 #include "LBParams.h"
-#include "Shared.h"
-
-struct LatticeAddressing {
-  int size[DQ_d];
-  int strides[DQ_d];
-  int n;
-};
+#include "SharedItem.h"
+#include "SharedArray.h"
+#include "LatticeAddressing.h"
 
 struct LDView {
   double* rho;
@@ -45,7 +41,7 @@ struct Lattice {
 
   SharedItem<LBParams> params;
   SharedItem<LatticeAddressing> addr;
-  LatticeData* data;
+  LatticeData data;
   /* Current timestep */
   int time_step;
 
