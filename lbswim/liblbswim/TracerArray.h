@@ -2,7 +2,9 @@
 #ifndef TRACER_ARRAY_H
 #define TRACER_ARRAY_H
 
-#include "Lattice.h"
+#include "Lists.h"
+
+class Lattice;
 
 struct TracerArray {
   static const size_t BlockSize = 512;

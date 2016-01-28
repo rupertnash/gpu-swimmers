@@ -10,8 +10,7 @@ typedef struct curandStateXORWOW RandState;
 #include "SharedItem.h"
 #include "SharedArray.h"
 
-typedef Array<double, 1, 1> ScalarList;
-typedef Array<double, 1, 3> VectorList;
+#include "Lists.h"
 typedef Array<RandState, 1, 1> RandList;
 
 class Lattice;

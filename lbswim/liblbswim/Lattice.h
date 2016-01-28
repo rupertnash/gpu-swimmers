@@ -9,9 +9,7 @@
 #include "SharedItem.h"
 #include "SharedArray.h"
 
-typedef Array<double, DQ_d, 1> ScalarField;
-typedef Array<double, DQ_d, DQ_d> VectorField;
-typedef Array<double, DQ_d, DQ_q> DistField;
+#include "Fields.h"
 
 struct LDView {
   ScalarField* rho;
