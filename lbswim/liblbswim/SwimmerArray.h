@@ -2,9 +2,19 @@
 #ifndef SWIMMER_ARRAY_H
 #define SWIMMER_ARRAY_H
 
-#include "Lattice.h"
+//#include "Lattice.h"
 #include <curand_kernel.h>
 typedef struct curandStateXORWOW RandState;
+
+#include "Array.h"
+#include "SharedItem.h"
+#include "SharedArray.h"
+
+typedef Array<double, 1, 1> ScalarList;
+typedef Array<double, 1, 3> VectorList;
+typedef Array<RandState, 1, 1> RandList;
+
+class Lattice;
 
 struct CommonParams {
   double P;
@@ -17,16 +27,16 @@ struct CommonParams {
 };
 
 struct SwimmerArray {
-  static const int BlockSize = 512;
-  SwimmerArray(const int n, const CommonParams* p);
+  static const size_t BlockSize = 512;
+  SwimmerArray(const size_t n, const CommonParams* p);
   void AddForces(Lattice* lat) const;
   void Move(Lattice* lat);
-  int num;
+  size_t num;
   SharedItem<CommonParams> common;
-  SharedArray<double> r;
-  SharedArray<double> v;
-  SharedArray<double> n;
-  SharedArray<RandState> prng;
+  SharedItem<VectorList> r;
+  SharedItem<VectorList> v;
+  SharedItem<VectorList> n;
+  SharedItem<RandList> prng;
 };
 
 

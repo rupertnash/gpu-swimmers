@@ -5,13 +5,13 @@
 #include "Lattice.h"
 
 struct TracerArray {
-  static const int BlockSize = 512;
-  TracerArray(const int n);
+  static const size_t BlockSize = 512;
+  TracerArray(const size_t n);
   void Move(Lattice* lat);
-  int num;
-  SharedArray<double> r;
-  SharedArray<double> s;
-  SharedArray<double> v;
+  size_t num;
+  SharedItem<VectorList> r;
+  SharedItem<VectorList> s;
+  SharedItem<VectorList> v;
 };
 
 

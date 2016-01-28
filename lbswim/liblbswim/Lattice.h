@@ -4,35 +4,39 @@
 
 #include "dq.h"
 #include "LBParams.h"
+
+#include "Array.h"
 #include "SharedItem.h"
 #include "SharedArray.h"
-#include "LatticeAddressing.h"
+
+typedef Array<double, DQ_d, 1> ScalarField;
+typedef Array<double, DQ_d, DQ_d> VectorField;
+typedef Array<double, DQ_d, DQ_q> DistField;
 
 struct LDView {
-  double* rho;
-  double* u;
-  double* force;
-  double* fOld;
-  double* fNew;  
+  ScalarField* rho;
+  VectorField* u;
+  VectorField* force;
+  DistField* fOld;
+  DistField* fNew;
 };
 
 struct LatticeData {
-  LatticeData(const LatticeAddressing& addr_);
-  //const LatticeAddressing& addr;
+  LatticeData(const Shape& shape_);
   
   LDView Host();
   LDView Device();
 
-  SharedArray<double> rho;
-  SharedArray<double> u;
-  SharedArray<double> force;
-  SharedArray<double> fOld;
-  SharedArray<double> fNew;
+  SharedItem<ScalarField> rho;
+  SharedItem<VectorField> u;
+  SharedItem<VectorField> force;
+  SharedItem<DistField> fOld;
+  SharedItem<DistField> fNew;
 };
 
 
 struct Lattice {
-  Lattice(int nx, int ny, int nz, double tau_s, double tau_b);
+  Lattice(const Shape& shape, double tau_s, double tau_b);
   ~Lattice();
   void Step();
   void CalcHydro();
@@ -40,7 +44,7 @@ struct Lattice {
   void ZeroForce();
 
   SharedItem<LBParams> params;
-  SharedItem<LatticeAddressing> addr;
+  Shape shape;
   LatticeData data;
   /* Current timestep */
   int time_step;

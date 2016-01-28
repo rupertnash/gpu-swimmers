@@ -9,36 +9,36 @@
 // This defines the LatticeEigenSet() for the D3Q15 velocity set
 #include "d3q15.c"
 
-LatticeData::LatticeData(const LatticeAddressing& addr) : rho(addr.n),
-							   u(addr.n*DQ_d),
-							   force(addr.n*DQ_d),
-							   fOld(addr.n*DQ_q),
-							   fNew(addr.n*DQ_q)
+LatticeData::LatticeData(const Shape& shape) : rho(shape),
+					       u(shape),
+					       force(shape),
+					       fOld(shape),
+					       fNew(shape)
 {
 }
   
 LDView LatticeData::Host() {
   LDView v;
-  v.rho = rho.host;
-  v.u = u.host;
-  v.force = force.host;
-  v.fOld = fOld.host;
-  v.fNew = fNew.host;
+  v.rho = rho.Host();
+  v.u = u.Host();
+  v.force = force.Host();
+  v.fOld = fOld.Host();
+  v.fNew = fNew.Host();
   return v;
 }
 LDView LatticeData::Device(){
   LDView v;
-  v.rho = rho.device;
-  v.u = u.device;
-  v.force = force.device;
-  v.fOld = fOld.device;
-  v.fNew = fNew.device;
+  v.rho = rho.Device();
+  v.u = u.Device();
+  v.force = force.Device();
+  v.fOld = fOld.Device();
+  v.fNew = fNew.Device();
   return v;
 }
 
 //template void SharedArray<double>::H2D();
 //template class SharedArray<double>;
-Lattice::Lattice(int nx, int ny, int nz, double tau_s, double tau_b) : time_step(0), addr(nx, ny, nz), data(*addr) {
+Lattice::Lattice(const Shape& shape_, double tau_s, double tau_b) : shape(shape_), data(shape_), time_step(0) {
   // Set up params and move to device
   params->tau_s = tau_s;
   params->tau_b = tau_b;
@@ -58,29 +58,23 @@ Lattice::~Lattice() {
 __constant__ double DQ_delta[DQ_d][DQ_d] = {{1.0, 0.0, 0.0},
 					    {0.0, 1.0, 0.0},
 					    {0.0, 0.0, 1.0}};
-__global__ void DoStep(const LBParams* params,
-		       const LatticeAddressing* addr,
-		       LDView data) {
-  const int siteIdx[DQ_d] = {threadIdx.x + blockIdx.x * blockDim.x,
+__global__ void DoStep(const LBParams* params, LDView data) {
+  
+  const Shape siteIdx = {threadIdx.x + blockIdx.x * blockDim.x,
 			 threadIdx.y + blockIdx.y * blockDim.y,
 			 threadIdx.z + blockIdx.z * blockDim.z};
-  
+
+  const Shape& shape = data.rho->indexer.shape;
   /* loop indices for dimension */
   int a,b;
   /* If we're out of bounds, skip */
   for (a=0; a<DQ_d; a++) {
-    if (siteIdx[a] >= addr->size[a])
+    if (siteIdx[a] >= shape[a])
       return;
   }
-  const int ijk = siteIdx[DQ_X]*addr->strides[DQ_X] + 
-    siteIdx[DQ_Y]*addr->strides[DQ_Y] + 
-    siteIdx[DQ_Z]*addr->strides[DQ_Z];
-  
-  const int nSites = addr->n;
 
-  const double* fOld = data.fOld;
-  const double* force = data.force;
-  double* fNew = data.fNew;
+  auto fOld = (*data.fOld)[siteIdx];
+  auto force = (*data.force)[siteIdx];
   
   /* loop indices for velocities & modes */
   int p,m;
@@ -103,7 +97,7 @@ __global__ void DoStep(const LBParams* params,
   for (m=0; m<DQ_q; m++) {
     mode[m] = 0.;
     for (p=0; p<DQ_q; p++) {
-      mode[m] += fOld[p*nSites + ijk] * params->mm[m][p];
+      mode[m] += fOld[p] * params->mm[m][p];
     }
   }
 
@@ -116,10 +110,10 @@ __global__ void DoStep(const LBParams* params,
   usq = 0.;
   uDOTf = 0.;
   for (a=0; a<DQ_d; a++) {
-    u[a] = (mode[DQ_mom(a)] + 0.5*force[a*nSites + ijk]) / mode[DQ_rho];
-    mode[DQ_mom(a)] += force[a*nSites + ijk];
+    u[a] = (mode[DQ_mom(a)] + 0.5*force[a]) / mode[DQ_rho];
+    mode[DQ_mom(a)] += force[a];
     usq += u[a]*u[a];
-    uDOTf += u[a]*force[a*nSites + ijk];
+    uDOTf += u[a]*force[a];
   }
 
   /* For unequal relax trace & traceless part at different rates.
@@ -160,7 +154,7 @@ __global__ void DoStep(const LBParams* params,
 			  mode[DQ_rho]*(u[a]*u[b] -usq*DQ_delta[a][b]));
       
       /* including traceless force */
-      S[a][b] += 2.*omega_s*tau_s * (u[a]*force[b*nSites + ijk] + force[a*nSites + ijk]*u[b] - 2. * uDOTf * DQ_delta[a][b]);
+      S[a][b] += 2.*omega_s*tau_s * (u[a]*force[b] + force[a]*u[b] - 2. * uDOTf * DQ_delta[a][b]);
     }
     /* add the trace back on */
     S[a][a] += TrS / DQ_d;
@@ -194,20 +188,18 @@ __global__ void DoStep(const LBParams* params,
   /* Stream */
   for (p=0; p<DQ_q; p++) {
     const int* cp = params->ci[p];
-    int destIdx[DQ_d];
-    int dest_ijk = 0;
+    Shape destIdx;
     for (a=0; a<DQ_d; a++) {
       /* This does the PBC */
-      destIdx[a] = (siteIdx[a] + cp[a] + addr->size[a]) % addr->size[a];
-      dest_ijk +=  destIdx[a] * addr->strides[a];
+      destIdx[a] = (siteIdx[a] + cp[a] + shape[a]) % shape[a];
     }
-    fNew[p*nSites + dest_ijk] = fPostCollision[p];
+    (*data.fNew)[destIdx][p] = fPostCollision[p];
   }
 
 }
 
 void Lattice::Step() {
-  const int* lat_size = addr->size;
+  //const int* lat_size = addr->size;
   const int bs = 8;
   
   dim3 block_shape;
@@ -216,75 +208,66 @@ void Lattice::Step() {
   block_shape.z = bs;
 
   dim3 num_blocks;
-  num_blocks.x = (lat_size[DQ_X] + block_shape.x - 1)/block_shape.x;
-  num_blocks.y = (lat_size[DQ_Y] + block_shape.y - 1)/block_shape.y;
-  num_blocks.z = (lat_size[DQ_Z] + block_shape.z - 1)/block_shape.z;
+  num_blocks.x = (shape[DQ_X] + block_shape.x - 1)/block_shape.x;
+  num_blocks.y = (shape[DQ_Y] + block_shape.y - 1)/block_shape.y;
+  num_blocks.z = (shape[DQ_Z] + block_shape.z - 1)/block_shape.z;
   
   DoStep<<<num_blocks, block_shape>>>(params.Device(),
-				      addr.Device(),
+				      //addr.Device(),
 				      data.Device());
 
   /* Wait for completion */
   CUDA_SAFE_CALL(cudaDeviceSynchronize());
 
   /* Swap the f ptrs on the device */
-  double* tmp = data.fOld.device;
-  data.fOld.device = data.fNew.device;
-  data.fNew.device = tmp;
+  SharedItem<DistField>::SwapDevicePointers(data.fOld, data.fNew);
 
   time_step++;
 }
 
 
-__global__ void DoCalcHydro(const LBParams* params, const LatticeAddressing* addr, LDView data) {
-  /* Index for loops over dimension */
-  int a;
-  const int siteIdx[DQ_d] = {threadIdx.x + blockIdx.x * blockDim.x,
-			     threadIdx.y + blockIdx.y * blockDim.y,
-			     threadIdx.z + blockIdx.z * blockDim.z};
-  
+__global__ void DoCalcHydro(const LBParams* params, LDView data) {
+  const Shape siteIdx = {threadIdx.x + blockIdx.x * blockDim.x,
+			 threadIdx.y + blockIdx.y * blockDim.y,
+			 threadIdx.z + blockIdx.z * blockDim.z};
+
+  const Shape& shape = data.rho->indexer.shape;
   /* If we're out of bounds, skip */
-  for (a=0; a<DQ_d; a++) {
-    if (siteIdx[a] >= addr->size[a])
+  for (size_t a=0; a<DQ_d; a++) {
+    if (siteIdx[a] >= shape[a])
       return;
   }
-  const int ijk = siteIdx[DQ_X]*addr->strides[DQ_X] + 
-    siteIdx[DQ_Y]*addr->strides[DQ_Y] + 
-    siteIdx[DQ_Z]*addr->strides[DQ_Z];
-  
-  const int nSites = addr->n;
-  
+
   /* Indices for loops over dists/modes */
-  int m, p;
+  size_t m, p;
   double mode[DQ_q];
 
-    /* dists at time = t */
-  const double* f_t = data.fOld;
-  const double* force = data.force;
-  double* u = data.u;
-  double* rho = data.rho;
+  /* dists at time = t */
+  auto f_t = const_cast<const DistField*>(data.fOld)->operator[](siteIdx);
+  auto force = const_cast<const VectorField*>(data.force)->operator[](siteIdx);
+  auto u = data.u->operator[](siteIdx);
+  auto rho = data.rho->operator[](siteIdx);
 
   /* compute the modes */
   for (m=0; m<DQ_q; m++) {
     mode[m] = 0.;
     for (p=0; p<DQ_q; p++) {
-      mode[m] += f_t[p*nSites + ijk] * params->mm[m][p];
+      mode[m] += f_t[p] * params->mm[m][p];
     }
   }
   
-  rho[ijk] = mode[DQ_rho];
+  rho[0] = mode[DQ_rho];
   
   /* Work out the site fluid velocity
    *   rho*u= (rho*u') + F*\Delta t /2
    */
-  for (a=0; a<DQ_d; a++) {
-    u[a*nSites + ijk] = (mode[DQ_mom(a)] + 0.5*force[a*nSites + ijk]) / mode[DQ_rho];
+  for (size_t a=0; a<DQ_d; a++) {
+    u[a] = (mode[DQ_mom(a)] + 0.5*force[a]) / mode[DQ_rho];
   }
 	
 }
 
 void Lattice::CalcHydro() {
-  const int* lat_size = addr->size;
   const int bs = 8;
 
   dim3 block_shape;
@@ -293,74 +276,65 @@ void Lattice::CalcHydro() {
   block_shape.z = bs;
 
   dim3 num_blocks;
-  num_blocks.x = (lat_size[DQ_X] + block_shape.x - 1)/block_shape.x;
-  num_blocks.y = (lat_size[DQ_Y] + block_shape.y - 1)/block_shape.y;
-  num_blocks.z = (lat_size[DQ_Z] + block_shape.z - 1)/block_shape.z;
+  num_blocks.x = (shape[DQ_X] + block_shape.x - 1)/block_shape.x;
+  num_blocks.y = (shape[DQ_Y] + block_shape.y - 1)/block_shape.y;
+  num_blocks.z = (shape[DQ_Z] + block_shape.z - 1)/block_shape.z;
 
-  DoCalcHydro<<<num_blocks, block_shape>>>(params.Device(), addr.Device(), data.Device());
+  DoCalcHydro<<<num_blocks, block_shape>>>(params.Device(), data.Device());
 }
 
-__global__ void DoInitFromHydro(const LBParams* params, const LatticeAddressing* addr, LDView data) {
-  const int siteIdx[DQ_d] = {threadIdx.x + blockIdx.x * blockDim.x,
-			     threadIdx.y + blockIdx.y * blockDim.y,
-			     threadIdx.z + blockIdx.z * blockDim.z};
-  
-  /* loop indices for dimension */
-  int a;
+__global__ void DoInitFromHydro(const LBParams* params, LDView data) {
+  const Shape siteIdx = {threadIdx.x + blockIdx.x * blockDim.x,
+			 threadIdx.y + blockIdx.y * blockDim.y,
+			 threadIdx.z + blockIdx.z * blockDim.z};
+
+  const Shape& shape = data.rho->indexer.shape;
   /* If we're out of bounds, skip */
-  for (a=0; a<DQ_d; a++) {
-    if (siteIdx[a] >= addr->size[a])
+  for (size_t a=0; a<DQ_d; a++) {
+    if (siteIdx[a] >= shape[a])
       return;
   }
-  const int ijk = siteIdx[DQ_X]*addr->strides[DQ_X] + 
-    siteIdx[DQ_Y]*addr->strides[DQ_Y] + 
-    siteIdx[DQ_Z]*addr->strides[DQ_Z];
-  const int nSites = addr->n;
 
-    /* dists at time = t */
-  double* f_t = data.fOld;
-  //const double* force = lat->data->force_ptr;
-  const double* u = data.u;
-  const double* rho = data.rho;
+  /* dists at time = t */
+  auto f_t = data.fOld->operator[](siteIdx);
+  auto u = const_cast<const VectorField*>(data.u)->operator[](siteIdx);
+  auto rho = const_cast<const ScalarField*>(data.rho)->operator[](siteIdx)[0];
 
-  /* loop indices for velocities & modes */
-  int p,m;
+  /* Indices for loops over dists/modes */
+  size_t m, p;
   /* Create the modes, all zeroed out */
-  double mode[DQ_q];
-  for (m=0; m<DQ_q; m++)
-    mode[m] = 0.0;
+  array<double, DQ_q> mode;
 
   /* Now set the equilibrium values */
   /* Density */
-  mode[DQ_rho] = rho[ijk];
+  mode[DQ_rho] = rho;
   
   /* Momentum */
-  for (a=0; a<DQ_d; a++) {
-    mode[DQ_mom(a)] = rho[ijk] * u[a*nSites + ijk];// - 0.5*force[a*nSites + ijk];
+  for (size_t a=0; a<DQ_d; a++) {
+    mode[DQ_mom(a)] = rho * u[a];// - 0.5*force[a*nSites + ijk];
   }
 
   /* Stress */
-  mode[DQ_SXX] = rho[ijk] * u[DQ_X*nSites + ijk] * u[DQ_X*nSites + ijk];
-  mode[DQ_SXY] = rho[ijk] * u[DQ_X*nSites + ijk] * u[DQ_Y*nSites + ijk];
-  mode[DQ_SXZ] = rho[ijk] * u[DQ_X*nSites + ijk] * u[DQ_Y*nSites + ijk];
+  mode[DQ_SXX] = rho * u[DQ_X] * u[DQ_X];
+  mode[DQ_SXY] = rho * u[DQ_X] * u[DQ_Y];
+  mode[DQ_SXZ] = rho * u[DQ_X] * u[DQ_Z];
   
-  mode[DQ_SYY] = rho[ijk] * u[DQ_Y*nSites + ijk] * u[DQ_Y*nSites + ijk];
-  mode[DQ_SYZ] = rho[ijk] * u[DQ_Y*nSites + ijk] * u[DQ_Z*nSites + ijk];
+  mode[DQ_SYY] = rho * u[DQ_Y] * u[DQ_Y];
+  mode[DQ_SYZ] = rho * u[DQ_Y] * u[DQ_Z];
   
-  mode[DQ_SZZ] = rho[ijk] * u[DQ_Z*nSites + ijk] * u[DQ_Z*nSites + ijk];
+  mode[DQ_SZZ] = rho * u[DQ_Z] * u[DQ_Z];
 
   /* Now project modes->dists */
   for (p=0; p<DQ_q; p++) {
-    f_t[p*nSites + ijk] = 0.;
+    f_t[p] = 0.;
     for (m=0; m<DQ_q; m++) {
-      f_t[p*nSites + ijk] += mode[m] * params->mmi[p][m];
+      f_t[p] += mode[m] * params->mmi[p][m];
     }
   }
 
 }
 
 void Lattice::InitFromHydro() {
-  const int* lat_size = addr->size;
   const int bs = 8;
 
   dim3 block_shape;
@@ -369,38 +343,34 @@ void Lattice::InitFromHydro() {
   block_shape.z = bs;
 
   dim3 num_blocks;
-  num_blocks.x = (lat_size[DQ_X] + block_shape.x - 1)/block_shape.x;
-  num_blocks.y = (lat_size[DQ_Y] + block_shape.y - 1)/block_shape.y;
-  num_blocks.z = (lat_size[DQ_Z] + block_shape.z - 1)/block_shape.z;
+  num_blocks.x = (shape[DQ_X] + block_shape.x - 1)/block_shape.x;
+  num_blocks.y = (shape[DQ_Y] + block_shape.y - 1)/block_shape.y;
+  num_blocks.z = (shape[DQ_Z] + block_shape.z - 1)/block_shape.z;
 
-  DoInitFromHydro<<<num_blocks, block_shape>>>(params.Device(), addr.Device(), data.Device());
+  DoInitFromHydro<<<num_blocks, block_shape>>>(params.Device(), data.Device());
 }
 
-__global__ void DoLatticeZeroForce(const LBParams* params, const LatticeAddressing* addr, LDView data) {
-  /* Index for loops over dimension */
-  int a;
-  const int siteIdx[DQ_d] = {threadIdx.x + blockIdx.x * blockDim.x,
-			     threadIdx.y + blockIdx.y * blockDim.y,
-			     threadIdx.z + blockIdx.z * blockDim.z};
-  
+__global__ void DoLatticeZeroForce(const LBParams* params, LDView data) {
+  const Shape siteIdx = {threadIdx.x + blockIdx.x * blockDim.x,
+			 threadIdx.y + blockIdx.y * blockDim.y,
+			 threadIdx.z + blockIdx.z * blockDim.z};
+
+  const Shape& shape = data.rho->indexer.shape;
   /* If we're out of bounds, skip */
-  for (a=0; a<DQ_d; a++) {
-    if (siteIdx[a] >= addr->size[a])
+  for (size_t a=0; a<DQ_d; a++) {
+    if (siteIdx[a] >= shape[a])
       return;
   }
-  const int ijk = siteIdx[DQ_X]*addr->strides[DQ_X] + 
-    siteIdx[DQ_Y]*addr->strides[DQ_Y] + 
-    siteIdx[DQ_Z]*addr->strides[DQ_Z];
+
+  /* dists at time = t */
+  auto force = data.force->operator[](siteIdx);
   
-  const int nSites = addr->n;
-  
-  for (a=0; a<DQ_d; a++) {
-    data.force[a*nSites + ijk] = 0.0;
+  for (size_t a=0; a<DQ_d; a++) {
+    force[a] = 0.0;
   }
 }
 
 void Lattice::ZeroForce() {
-  const int* lat_size = addr->size;
   const int bs = 8;
 
   dim3 block_shape;
@@ -409,10 +379,10 @@ void Lattice::ZeroForce() {
   block_shape.z = bs;
 
   dim3 num_blocks;
-  num_blocks.x = (lat_size[DQ_X] + block_shape.x - 1)/block_shape.x;
-  num_blocks.y = (lat_size[DQ_Y] + block_shape.y - 1)/block_shape.y;
-  num_blocks.z = (lat_size[DQ_Z] + block_shape.z - 1)/block_shape.z;
+  num_blocks.x = (shape[DQ_X] + block_shape.x - 1)/block_shape.x;
+  num_blocks.y = (shape[DQ_Y] + block_shape.y - 1)/block_shape.y;
+  num_blocks.z = (shape[DQ_Z] + block_shape.z - 1)/block_shape.z;
 
-  DoLatticeZeroForce<<<num_blocks, block_shape>>>(params.Device(), addr.Device(), data.Device());
+  DoLatticeZeroForce<<<num_blocks, block_shape>>>(params.Device(), data.Device());
 }
 
