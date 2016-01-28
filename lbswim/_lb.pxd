@@ -1,4 +1,5 @@
-from _shared cimport SharedArray, SharedItem
+from _shared cimport SharedItem
+from _array cimport ScalarField, VectorField, DistField
 
 cdef extern from "lb.h":
     enum: DQ_d
@@ -30,11 +31,11 @@ cdef extern from "lb.h":
     #     double* fNew
 
     cdef cppclass LatticeData:
-        SharedArray[double] rho
-        SharedArray[double] u
-        SharedArray[double] force
-        SharedArray[double] fOld
-        SharedArray[double] fNew
+        ScalarField rho
+        VectorField u
+        VectorField force
+        DistField fOld
+        DistField fNew
         
 	
     cdef cppclass Lattice:

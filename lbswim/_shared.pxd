@@ -1,13 +1,6 @@
-cdef extern from "Shared.h":
-    cdef cppclass SharedArray[T]:
-        T* host
-        T* device
-        size_t size
-        void H2D()
-        void D2H()
-    
+#from _array cimport ScalarField, VectorField, DistField, ScalarList, VectorList
+
+cdef extern from "SharedArray.h":    
     cdef cppclass SharedItem[T]:
-        T* host
-        T* device
         void H2D()
         void D2H()
