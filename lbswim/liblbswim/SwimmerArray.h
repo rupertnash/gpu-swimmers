@@ -2,16 +2,13 @@
 #ifndef SWIMMER_ARRAY_H
 #define SWIMMER_ARRAY_H
 
-//#include "Lattice.h"
-#include <curand_kernel.h>
-typedef struct curandStateXORWOW RandState;
-
 #include "Array.h"
 #include "SharedItem.h"
 #include "SharedArray.h"
 
 #include "Lists.h"
-typedef Array<RandState, 1, 1> RandList;
+
+#include <curand_kernel.h>
 
 class Lattice;
 
