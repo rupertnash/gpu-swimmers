@@ -1,10 +1,14 @@
-from _array cimport VectorList, RandList
+cimport _array
 from _shared cimport SharedItem
 from _lb cimport Lattice
+from dq cimport *
+from Lists cimport _VectorList
 
 cdef extern from "SwimmerArray.h":
     cdef cppclass RandState:
         pass
+    ctypedef _array.Array[RandState, ONE, ONE] _RandList
+    
     cdef cppclass CommonParams:
         double P
         double l
@@ -21,7 +25,7 @@ cdef extern from "SwimmerArray.h":
         void Move(Lattice* lat)
         int num
         SharedItem[CommonParams] common
-        SharedItem[VectorList] r
-        SharedItem[VectorList] v
-        SharedItem[VectorList] n
-        SharedItem[RandList] prng
+        SharedItem[_VectorList] r
+        SharedItem[_VectorList] v
+        SharedItem[_VectorList] n
+        SharedItem[_RandList] prng

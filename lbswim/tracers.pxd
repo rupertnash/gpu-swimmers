@@ -1,12 +1,12 @@
 cimport TracerArray
-cimport shared
 from lb cimport Lattice
-    
+from Lists cimport SharedVectorList
+
 cdef class Array:
     cpdef AddForces(self, Lattice lat)
     cpdef Move(self, Lattice lat)
 
     cdef TracerArray.TracerArray* impl
-    cdef shared.Array _r
-    cdef shared.Array _s
-    cdef shared.Array _v
+    cdef SharedVectorList r
+    cdef SharedVectorList s
+    cdef SharedVectorList v

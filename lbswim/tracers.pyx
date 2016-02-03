@@ -6,14 +6,9 @@ cdef class Array:
     def __cinit__(self, int n):
         self.impl = new TracerArray.TracerArray(n)
         
-        self._r = shared.Array().init(self, cython.address(self.impl.r))
-        self._r.data.shape = (3, n)
-        
-        self._s = shared.Array().init(self, cython.address(self.impl.s))
-        self._s.data.shape = (3, n)
-        
-        self._v = shared.Array().init(self, cython.address(self.impl.v))
-        self._v.data.shape = (3, n)
+        self.r.ShInit(cython.address(self.impl.r))
+        self.s.ShInit(cython.address(self.impl.s))
+        self.v.ShInit(cython.address(self.impl.v))
         
         return
     
@@ -24,34 +19,25 @@ cdef class Array:
         self.impl.Move(lat.impl)
 
     def H2D(self):
-        self._r.H2D()
-        self._s.H2D()
-        self._v.H2D()
+        self.r.H2D()
+        self.s.H2D()
+        self.v.H2D()
         
     def D2H(self):
-        self._r.D2H()
-        self._s.D2H()
-        self._v.D2H()
+        self.r.D2H()
+        self.s.D2H()
+        self.v.D2H()
 
-    @property
-    def r(self):
-        return self._r
-    @property
-    def s(self):
-        return self._s
-    @property
-    def v(self):
-        return self._v
     def __reduce__(self):
         self.D2H()
-        array_data = (self._r.data, self._s.data, self._v.data)
+        array_data = (self.r.data, self.s.data, self.v.data)
         return (Array,
                 (self.impl.num,),
                 array_data)
     
     def __setstate__(self, data):
         r, s, v = data
-        self._r.data[:] = r[:]
-        self._s.data[:] = s[:]
-        self._v.data[:] = v[:]
+        self.r.data[:] = r[:]
+        self.s.data[:] = s[:]
+        self.v.data[:] = v[:]
         self.H2D()

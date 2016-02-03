@@ -1,4 +1,5 @@
-from _shared cimport SharedArray, SharedItem
+from _shared cimport SharedItem
+from Lists cimport _VectorList
 from _lb cimport Lattice
 
 cdef extern from "TracerArray.h":
@@ -6,6 +7,6 @@ cdef extern from "TracerArray.h":
         TracerArray(int n)
         void Move(Lattice* lat)
         int num
-        SharedArray[double] r
-        SharedArray[double] s
-        SharedArray[double] v
+        SharedItem[_VectorList] r
+        SharedItem[_VectorList] s
+        SharedItem[_VectorList] v

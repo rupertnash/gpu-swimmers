@@ -1,7 +1,7 @@
 cimport SwimmerArray
-cimport shared
 cimport _shared
 from lb cimport Lattice
+from Lists cimport SharedVectorList
 
 cdef class CommonParams:
     cdef adopt(self, _shared.SharedItem[SwimmerArray.CommonParams]* cp)
@@ -13,7 +13,7 @@ cdef class Array:
     cpdef Move(self, Lattice lat)
 
     cdef SwimmerArray.SwimmerArray* impl
-    cdef shared.Array _r
-    cdef shared.Array _v
-    cdef shared.Array _n
-    cdef CommonParams _common
+    cdef SharedVectorList r
+    cdef SharedVectorList v
+    cdef SharedVectorList n
+    cdef CommonParams common
