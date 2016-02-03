@@ -18,9 +18,6 @@ cdef extern from "Array.h":
         size_t nElems()
         size_t nDims()
 
-ctypedef Array[double, DQ_d, ONE] ScalarField
-ctypedef Array[double, DQ_d, DQ_d] VectorField
-ctypedef Array[double, DQ_d, DQ_q] DistField
 
 ctypedef Array[double, ONE, ONE] ScalarList
 ctypedef Array[double, ONE, DQ_d] VectorList
