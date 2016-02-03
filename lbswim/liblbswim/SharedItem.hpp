@@ -5,57 +5,10 @@
 #include "SharedItem.h"
 #include "cucall.h"
 
-template <typename T>
-SharedItem<T>::SharedItem() {
-  host = new T;
-  CUDA_SAFE_CALL(cudaMalloc(&device, sizeof(T)));
-  H2D();
-}
-
-template <typename T>
-template<typename A1>
-SharedItem<T>::SharedItem(A1 a1) {
-  host = new T(a1);
-  CUDA_SAFE_CALL(cudaMalloc(&device, sizeof(T)));
-  H2D();
-}
-
-template <typename T>
-template<typename A1, typename A2>
-SharedItem<T>::SharedItem(A1 a1, A2 a2) {
-  host = new T(a1, a2);
-  CUDA_SAFE_CALL(cudaMalloc(&device, sizeof(T)));
-  H2D();
-}
-
-template <typename T>
-template<typename A1, typename A2, typename A3>
-SharedItem<T>::SharedItem(A1 a1, A2 a2, A3 a3) {
-  host = new T(a1, a2, a3);
-  CUDA_SAFE_CALL(cudaMalloc(&device, sizeof(T)));
-  H2D();
-}
-
-template <typename T>
-template<typename A1, typename A2, typename A3, typename A4>
-SharedItem<T>::SharedItem(A1 a1, A2 a2, A3 a3, A4 a4) {
-  host = new T(a1, a2, a3, a4);
-  CUDA_SAFE_CALL(cudaMalloc(&device, sizeof(T)));
-  H2D();
-}
-
-template <typename T>
-SharedItem<T>::SharedItem(const T* init) {
-  host = new T;
-  *host = *init;
-  CUDA_SAFE_CALL(cudaMalloc(&device, sizeof(T)));
-  H2D();
-}
-
-template <typename T>
-SharedItem<T>::SharedItem(const T& init) {
-  host = new T;
-  *host = init;
+template<typename T>
+template<typename... Args>
+SharedItem<T>::SharedItem(Args... args) {
+  host = new T(args...);
   CUDA_SAFE_CALL(cudaMalloc(&device, sizeof(T)));
   H2D();
 }

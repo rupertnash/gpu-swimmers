@@ -16,7 +16,7 @@ __global__ void DoInitPrng(const unsigned long long seed,
 }
 
 SwimmerArray::SwimmerArray(const size_t num_, const CommonParams* p) : 
-  num(num_), common(p),
+  num(num_), common(*p),
   r(array<size_t,1>{num_}), v(array<size_t,1>{num_}), n(array<size_t,1>{num_}),
   prng(array<size_t,1>{num})
 {
