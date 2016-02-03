@@ -1,10 +1,15 @@
 from _shared cimport SharedItem
-from _array cimport ScalarField, VectorField, DistField
+from Fields cimport _ScalarField, _VectorField, _DistField
 
-cdef extern from "lb.h":
+cdef extern from "Lattice.h":
     enum: DQ_d
     enum: DQ_q
-    
+
+    cdef cppclass Shape:
+        Shape()
+        Shape(size_t, size_t, size_t)
+        size_t operator[](size_t)
+        
     cdef cppclass LBParams:
         double cs2
         double w[DQ_q]
@@ -17,35 +22,29 @@ cdef extern from "lb.h":
         double mmi[DQ_q][DQ_q]
         double tau_s
         double tau_b
-        
-    cdef cppclass LatticeAddressing:
-        int size[DQ_d]
-        int strides[DQ_d]
-        int n
-
-    # cdef cppclass LDView:
-    #     double* rho
-    #     double* u
-    #     double* force
-    #     double* fOld
-    #     double* fNew
+    
+    cdef cppclass LDView:
+        _ScalarField* rho
+        _VectorField* u
+        _VectorField* force
+        _DistField* fOld
+        _DistField* fNew
 
     cdef cppclass LatticeData:
-        ScalarField rho
-        VectorField u
-        VectorField force
-        DistField fOld
-        DistField fNew
+        SharedItem[_ScalarField] rho
+        SharedItem[_VectorField] u
+        SharedItem[_VectorField] force
+        SharedItem[_DistField] fOld
+        SharedItem[_DistField] fNew
         
-	
     cdef cppclass Lattice:
-        Lattice(int, int, int, double, double)
+        Lattice(const Shape&, double, double)
         void Step()
         void CalcHydro()
         void InitFromHydro()
         void ZeroForce()
-        LatticeData* data
         SharedItem[LBParams] params
-        SharedItem[LatticeAddressing] addr
+        Shape shape
+        LatticeData data
         int time_step
     

@@ -1,12 +1,6 @@
 cimport cython
-# Import numpy both ways
-import numpy as np
-#cimport numpy as np
-np.import_array()
-# Get the c headers
-#cimport _lb
-
-#cimport shared
+import numpy
+numpy.import_array()
 
 cdef class ArrayWrapper:
     def __cinit__(self, owner):
@@ -18,42 +12,6 @@ cdef class ArrayWrapper:
         np.set_array_base(ndarray, self)
         return ndarray
 
-cdef class SharedLatticeArray:
-    def __init__(self, Lattice lat, shared.Array sa):
-        self.impl = sa
-        cdef int nSites = lat.addr.n
-        shape = (sa.impl.size/nSites, )+ lat.addr.size
-        self.view = sa.view.reshape(shape)
-        return
-    
-    @property
-    def data(self):
-        return self.view
-    
-    def H2D(self):
-        self.impl.H2D()
-        return
-    def D2H(self):
-        self.impl.D2H()
-        return
-    
-    def __getattr__(self, attr):
-        return getattr(self.view, attr)
-    def __getitem__(self, idx):
-        return self.view[idx]
-    def __setitem__(self, idx, val):
-        self.view[idx] = val
-    pass
-
-cdef class LatticeAddressing:
-    @property
-    def size(self):
-        return tuple(self.impl.size)
-    
-    @property
-    def n(self):
-        return self.impl.n
-    
 cdef class LBParams:
     """Wraps all the parameters of the LB model.
     Treat this as read only.
@@ -138,15 +96,18 @@ cdef class LBParams:
     
 cdef class Lattice:
     def __cinit__(self, int nx, int ny, int nz, double tau_s, double tau_b):
-        self.impl = new _lb.Lattice(nx, ny, nz, tau_s, tau_b)
-        self._params = None
-        self._rho = None
-        self._u = None
-        self._force = None
-        self._fOld = None
-        self._fNew = None
+        cdef _lb.Shape shp = _lb.Shape(nx, ny, nz)
+        self.impl = new _lb.Lattice(shp, tau_s, tau_b)
         if self.impl is NULL:
             raise MemoryError()
+        
+        self._params = None
+        
+        self.rho.ShInit(cython.address(self.impl.data.rho))
+        self.u.ShInit(cython.address(self.impl.data.u))
+        self.force.ShInit(cython.address(self.impl.data.force))
+        self.fOld.ShInit(cython.address(self.impl.data.fOld))
+        self.fNew.ShInit(cython.address(self.impl.data.fNew))
     
     def __dealloc__(self):
         if self.impl is not NULL:
@@ -167,79 +128,38 @@ cdef class Lattice:
     @property
     def time_step(self):
         return self.impl.time_step
-    
-    @property
-    def addr(self):
-        if self._addr is None:
-            self._addr = LatticeAddressing()
-            self._addr.impl = self.impl.addr.host
-        return self._addr
-    
+        
     @property
     def params(self):
         if self._params is None:
             self._params = LBParams()
-            self._params.impl = self.impl.params.host
+            self._params.impl = self.impl.params.Host()
             self._params.lat = self
         return self._params
     
-    @property
-    def rho(self):
-        if self._rho is None:
-            raw = shared.Array().init(self, cython.address(self.impl.data.rho))
-            self._rho = SharedLatticeArray(self, raw)
-        return self._rho
-
-    @property
-    def u(self):
-        if self._u is None:
-            raw = shared.Array().init(self, cython.address(self.impl.data.u))
-            self._u = SharedLatticeArray(self, raw)
-        return self._u
-
-    @property
-    def force(self):
-        if self._force is None:
-            raw = shared.Array().init(self, cython.address(self.impl.data.force))
-            self._force = SharedLatticeArray(self, raw)
-        return self._force
-
-    @property
-    def fOld(self):
-        if self._fOld is None:
-            raw = shared.Array().init(self, cython.address(self.impl.data.fOld))
-            self._fOld = SharedLatticeArray(self, raw)
-        return self._fOld
-
-    @property
-    def fNew(self):
-        if self._fNew is None:
-            raw = shared.Array().init(self, cython.address(self.impl.data.fNew))
-            self._fNew = SharedLatticeArray(self, raw)
-        return self._fNew
-
     def __reduce__(self):
         """Implement pickle protocol for extension classes.
         Return 3-tuple of (constructor, ctor_args, setstate_args)
         """
-        cdef int* size = self.impl.addr.host.size
-        cdef _lb.LBParams* p = self.impl.params.host
-        init_args = (size[0], size[1], size[2], p.tau_s, p.tau_b)
+        raise NotImplementedError()
+        # cdef int* size = self.impl.addr.host.size
+        # cdef _lb.LBParams* p = self.impl.params.host
+        # init_args = (size[0], size[1], size[2], p.tau_s, p.tau_b)
 
-        # fOld is the only array that really matters, the rest can be recomputed
-        self.fOld.D2H()
-        data = (self.impl.time_step, self.fOld.data)
+        # # fOld is the only array that really matters, the rest can be recomputed
+        # self.fOld.D2H()
+        # data = (self.impl.time_step, self.fOld.data)
         
-        return (self.__class__,
-                init_args,
-                data)
+        # return (self.__class__,
+        #         init_args,
+        #         data)
 
     def __setstate__(self, data):
-        ts, file_f_data = data
+        # ts, file_f_data = data
         
-        self.impl.time_step = ts
+        # self.impl.time_step = ts
         
-        my_f_data = self.fOld.data
-        my_f_data[:] = file_f_data[:]
-        self.fOld.H2D()
-        
+        # my_f_data = self.fOld.data
+        # my_f_data[:] = file_f_data[:]
+        # self.fOld.H2D()
+        raise NotImplementedError()
