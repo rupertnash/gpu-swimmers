@@ -18,10 +18,6 @@ cdef extern from "Array.h":
         size_t nElems()
         size_t nDims()
 
-
-ctypedef Array[double, ONE, ONE] ScalarList
-ctypedef Array[double, ONE, DQ_d] VectorList
-
 cdef extern from "ArrayHelper.h":
     cdef cppclass ArrayHelper[ArrayType]:
         ArrayHelper(ArrayType* impl_)

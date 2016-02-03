@@ -13,7 +13,7 @@ set_source_files_properties(${PYX_SOURCES}
 INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/liblbswim ${NUMPY_INCLUDE_DIRS})
 add_compile_options(--std=c++11)
 
-foreach(basename Array shared lb swimmers tracers)
+foreach(basename Array Fields Lists lb swimmers tracers)
   cython_add_module(${basename} ${basename}.pyx)
   target_link_libraries(${basename} lbswim)
   install(TARGETS ${basename}
