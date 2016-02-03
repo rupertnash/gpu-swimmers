@@ -76,8 +76,6 @@ struct SpaceIndexer
   BOTH SpaceIndexer(const ShapeType& shp) : shape(shp),
 					    strides(SpaceLayoutPolicy<ND>::MakeStrides(shp)),
 					    size(Product(shp))
-				       // size(std::accumulate(shp.begin(), shp.end(), 1,
-				       // 			    [](size_t a, size_t b) {return a*b;}))
   {
   }
   
@@ -185,6 +183,7 @@ BOTH typename Array<T, 1, nElem>::ConstSubType Helper(const Array<T, 1, nElem>& 
 template <typename T, size_t ND, size_t nElem>
 struct Array
 {
+  typedef T ElemType;
   typedef SpaceIndexer<ND> IdxType;
   typedef typename IdxType::ShapeType ShapeType;
   typedef ElemWrapper<T, nElem> WrapType;
@@ -199,15 +198,7 @@ struct Array
   T* data;
   // Shared pointer to base memory.
   T* baseData;
-  
-  // Helper class to call delete[] (instead of delete) on the
-  // allocated memory.
-  struct Deleter {
-    BOTH void operator()(T* ptr) {
-      delete[] ptr;
-    }
-  };
-  
+    
   // struct iterator : public std::iterator<std::bidirectional_iterator_tag, WrapType> {
   //   Array& container;
   //   size_t ijk;
@@ -241,7 +232,20 @@ struct Array
   //     return *this;
   //   }
   // };
+  BOTH size_t nElems() const {
+    return nElem;
+  }
   
+  BOTH size_t nDims() const {
+    return ND;
+  }
+  BOTH const ShapeType& Shape() const {
+    return indexer.shape;
+  }
+  BOTH const ShapeType& Strides() const {
+    return indexer.strides;
+  }
+
   // Default constructor
   BOTH Array() : indexer(ShapeType()), data(nullptr), baseData(nullptr)
   {

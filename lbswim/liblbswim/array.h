@@ -4,7 +4,7 @@
 
 #include "cuhelp.h"
 
-#ifdef __CUDACC__
+/* Minimal CUDA-compatible std::array replacement */
 
 template <typename T, size_t N>
 class array
@@ -29,14 +29,7 @@ public:
     static_assert(sizeof...(args) == N, "Wrong number of arguments");
     Init(0, args...);
   }
-  
-  // BOTH array(std::initializer_list<T> l) {
-  //   static_assert(l.size() == N, "Wrong size!");
-  //   size_t i = 0
-  //   for (; i<N; ++i)
-  //     data[i] = l[i];
-  // }
-  
+    
   BOTH T& operator[](size_t i) {
     return data[i];
   }
@@ -44,11 +37,5 @@ public:
     return data[i];
   }
 };
-
-#else
-template <typename T, size_t N>
-using array = std::array<T, N>;
-
-#endif
 
 #endif
