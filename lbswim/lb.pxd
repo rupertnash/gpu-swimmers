@@ -20,8 +20,8 @@ cdef class LBParams:
 cdef class Lattice:
     cdef _lb.Lattice* impl
     cdef LBParams _params
-    cdef SharedScalarField rho
-    cdef SharedVectorField u
-    cdef SharedVectorField force
-    cdef SharedDistField fOld
-    cdef SharedDistField fNew
+    cdef readonly SharedScalarField rho
+    cdef readonly SharedVectorField u
+    cdef readonly SharedVectorField force
+    cdef readonly SharedDistField fOld
+    cdef readonly SharedDistField fNew

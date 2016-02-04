@@ -6,10 +6,16 @@ template<typename T>
 class SharedItem {
   T* host;
   T* device;
+
+  void DevAlloc();
 public:
   // Varadic construct that delegates to the shared type.
   template<typename... Args>
-  SharedItem(Args... args);
+  SharedItem(Args... args) {
+    host = new T(args...);
+    DevAlloc();
+    H2D();
+  }
   
   ~SharedItem();
 

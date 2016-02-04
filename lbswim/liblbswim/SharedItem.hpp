@@ -6,11 +6,8 @@
 #include "cucall.h"
 
 template<typename T>
-template<typename... Args>
-SharedItem<T>::SharedItem(Args... args) {
-  host = new T(args...);
+void SharedItem<T>::DevAlloc() {
   CUDA_SAFE_CALL(cudaMalloc(&device, sizeof(T)));
-  H2D();
 }
 
 template <typename T>

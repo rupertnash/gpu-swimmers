@@ -1,6 +1,5 @@
 cimport cython
-import numpy
-numpy.import_array()
+np.import_array()
 
 cdef class ArrayWrapper:
     def __cinit__(self, owner):
@@ -102,12 +101,11 @@ cdef class Lattice:
             raise MemoryError()
         
         self._params = None
-        
-        self.rho.ShInit(cython.address(self.impl.data.rho))
-        self.u.ShInit(cython.address(self.impl.data.u))
-        self.force.ShInit(cython.address(self.impl.data.force))
-        self.fOld.ShInit(cython.address(self.impl.data.fOld))
-        self.fNew.ShInit(cython.address(self.impl.data.fNew))
+        self.rho = SharedScalarField().ShInit(cython.address(self.impl.data.rho))
+        self.u = SharedVectorField().ShInit(cython.address(self.impl.data.u))
+        self.force = SharedVectorField().ShInit(cython.address(self.impl.data.force))
+        self.fOld = SharedDistField().ShInit(cython.address(self.impl.data.fOld))
+        self.fNew = SharedDistField().ShInit(cython.address(self.impl.data.fNew))
     
     def __dealloc__(self):
         if self.impl is not NULL:

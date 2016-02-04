@@ -9,7 +9,12 @@
 
 template class SharedItem<ScalarList>;
 template class SharedItem<VectorList>;
+
 template class SharedItem<ScalarField>;
 template class SharedItem<VectorField>;
 template class SharedItem<DistField>;
+
+template class SharedItem<RandList>;
+
 template class SharedItem<CommonParams>;
+template class SharedItem<LBParams>;
