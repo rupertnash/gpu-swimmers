@@ -20,7 +20,7 @@ namespace {
 
 template<typename T, size_t ND, size_t nElem>
 template<typename... Args>
-SharedItem< Array<T, ND, nElem> >::SharedItem(Args... args) {
+SharedItem< Array<T, ND, nElem> >::SharedItem(Args... args) : Array<T, ND, nElem>(args...) {
   void** tmp;
   CUDA_SAFE_CALL(cudaMallocManaged(&tmp, 2*sizeof(void*), cudaMemAttachGlobal));
   Super** tmp_this = reinterpret_cast<Super**>(tmp);
@@ -61,7 +61,7 @@ template<typename T, size_t ND, size_t nElem>
 void SharedItem< Array<T, ND, nElem> >::H2D() {
   CUDA_SAFE_CALL(cudaMemcpy(dev_data,
 			    this->data,
-			    sizeof(T),
+			    sizeof(T) * this->nElems() * this->Size(),
 			    cudaMemcpyHostToDevice));
 }
 
@@ -69,7 +69,7 @@ template<typename T, size_t ND, size_t nElem>
 void SharedItem< Array<T, ND, nElem> >::D2H() {
   CUDA_SAFE_CALL(cudaMemcpy(this->data,
 			    dev_data,
-			    sizeof(T),
+			    sizeof(T) * this->nElems() * this->Size(),
 			    cudaMemcpyDeviceToHost));
 }
 

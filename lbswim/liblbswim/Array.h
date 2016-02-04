@@ -245,7 +245,10 @@ struct Array
   BOTH const ShapeType& Strides() const {
     return indexer.strides;
   }
-
+  BOTH size_t Size() const {
+    return indexer.size;
+  }
+  
   // Default constructor
   BOTH Array() : indexer(ShapeType()), data(nullptr), baseData(nullptr)
   {
