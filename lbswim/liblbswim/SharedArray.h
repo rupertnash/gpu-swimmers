@@ -6,23 +6,28 @@
 #include "SharedItem.h"
 
 template<typename T, size_t ND, size_t nElem>
-class SharedItem< Array<T,ND,nElem> > : public Array<T, ND, nElem>
+class SharedItem< Array<T,ND,nElem> >
 {
  public:
-  typedef Array<T, ND, nElem> Super;
+  typedef Array<T, ND, nElem> SharedType;
+  typedef typename SharedType::ShapeType ShapeType;
+  
  private:
-  Super* device;
-  T* dev_data;
+  SharedType* host;
+  SharedType* device;
+  T* device_data;
+  size_t dataSize;
+  
  public:
-  template<typename... Args>
-  SharedItem(Args... args);
+  SharedItem();
+  SharedItem(const ShapeType& shape);
   ~SharedItem();
 
-  Super* Host();
-  Super* Device();
+  SharedType* Host();
+  SharedType* Device();
   
-  const Super* Host() const;
-  const Super* Device() const;
+  const SharedType* Host() const;
+  const SharedType* Device() const;
   void H2D();
   void D2H();
 

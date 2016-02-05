@@ -115,9 +115,6 @@ struct ElemWrapper
 {
   // The pointer to our zeroth element
   T* data;
-  // Shared pointer to our base allocation of memory
-  // std::shared_ptr<T> baseData;
-  T* baseData;
   // number of elements to the next element.
   size_t stride;
 
@@ -148,7 +145,7 @@ template<typename T, size_t ND, size_t nElem>
 BOTH typename Array<T, ND, nElem>::SubType Helper(Array<T, ND, nElem>& self, const size_t i) {
   Array<T, ND-1, nElem> ans;
   ans.data = self.data + i * self.indexer.strides[0];
-  ans.baseData = self.baseData;
+  ans.owner = false;
   ans.indexer = decltype(ans.indexer)::ReduceFrom(self.indexer);
   return ans;
 }
@@ -157,7 +154,7 @@ template<typename T, size_t nElem>
 BOTH typename Array<T, 1, nElem>::SubType Helper(Array<T, 1, nElem>& self, const size_t i) {
   ElemWrapper<T, nElem> ans;
   ans.data = self.data + i * self.indexer.strides[0];
-  ans.baseData = self.baseData;
+  // Refactor to allow layout switching
   ans.stride = self.indexer.size;
   return ans;
 }
@@ -165,7 +162,7 @@ template<typename T, size_t ND, size_t nElem>
 BOTH typename Array<T, ND, nElem>::ConstSubType Helper(const Array<T, ND, nElem>& self, const size_t i) {
   Array<T, ND-1, nElem> ans;
   ans.data = self.data + i * self.indexer.strides[0];
-  ans.baseData = self.baseData;
+  ans.owner = false;
   ans.indexer = decltype(ans.indexer)::ReduceFrom(self.indexer);
   return ans;
 }
@@ -174,7 +171,7 @@ template<typename T, size_t nElem>
 BOTH typename Array<T, 1, nElem>::ConstSubType Helper(const Array<T, 1, nElem>& self, const size_t i) {
   ElemWrapper<const T, nElem> ans;
   ans.data = self.data + i * self.indexer.strides[0];
-  ans.baseData = self.baseData;
+  // Refactor to allow layout switching
   ans.stride = self.indexer.size;
   return ans;
 }
@@ -196,8 +193,8 @@ struct Array
   IdxType indexer;
   // Pointer to our zeroth element
   T* data;
-  // Shared pointer to base memory.
-  T* baseData;
+  // Flag telling if this instance owns the data
+  bool owner;
     
   // struct iterator : public std::iterator<std::bidirectional_iterator_tag, WrapType> {
   //   Array& container;
@@ -250,19 +247,21 @@ struct Array
   }
   
   // Default constructor
-  BOTH Array() : indexer(ShapeType()), data(nullptr), baseData(nullptr)
+  BOTH Array() : indexer(ShapeType()), data(nullptr), owner(false)
   {
   }
   // Construct a given shape array
-  BOTH Array(const ShapeType& shape) : indexer(shape)
+  BOTH Array(const ShapeType& shape) : indexer(shape), owner(true)
   {
     size_t total_size = nElem * indexer.size;
-    // baseData = Ptr(new T[total_size], Deleter());
-    // data = baseData.get();
-    baseData = new T[total_size];
-    data = baseData;
+    data = new T[total_size];
   }
-
+  BOTH ~Array() {
+    if (owner) {
+      delete[] data;
+      data = NULL;
+    }
+  }
   // Subscript to return an array with dimensionality ND-1 or an
   // ElementWrapper, as appropriate.
   BOTH SubType operator[](size_t i) {
@@ -270,12 +269,9 @@ struct Array
   }
   
   BOTH WrapType operator[](const ShapeType& idx) {
-    // WrapType ans = {data + indexer(idx),
-    // 		    baseData,
-    // 		    indexer.size};
     WrapType ans;
     ans.data = data + indexer(idx);
-    ans.baseData = baseData;
+    // Refactor to allow layout switching
     ans.stride = indexer.size;
     return ans;
   }
@@ -287,7 +283,7 @@ struct Array
   BOTH ConstWrapType operator[](const ShapeType& idx) const {
     ConstWrapType ans;
     ans.data = data + indexer(idx);
-    ans.baseData = baseData;
+    // Refactor to allow layout switching
     ans.stride = indexer.size;
     return ans;
   }

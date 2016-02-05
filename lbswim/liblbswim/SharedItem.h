@@ -9,6 +9,7 @@ class SharedItem {
 
   void DevAlloc();
 public:
+  typedef T SharedType;
   // Varadic construct that delegates to the shared type.
   template<typename... Args>
   SharedItem(Args... args) {

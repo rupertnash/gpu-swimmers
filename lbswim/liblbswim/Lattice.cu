@@ -1,6 +1,7 @@
 // -*- mode: C++; -*-
 #include <stdio.h>
 #include <stdlib.h>
+#include <utility>
 
 #include "Lattice.h"
 #include "d3q15.h"
@@ -46,8 +47,6 @@ Lattice::Lattice(const Shape& shape_, double tau_s, double tau_b) : shape(shape_
 
   params.H2D();
   
-  // Set up data arrays, but don't copy
-  // data = new LatticeData(*addr);
 }
 
 
@@ -199,7 +198,6 @@ __global__ void DoStep(const LBParams* params, LDView data) {
 }
 
 void Lattice::Step() {
-  //const int* lat_size = addr->size;
   const int bs = 8;
   
   dim3 block_shape;
@@ -213,14 +211,14 @@ void Lattice::Step() {
   num_blocks.z = (shape[DQ_Z] + block_shape.z - 1)/block_shape.z;
   
   DoStep<<<num_blocks, block_shape>>>(params.Device(),
-				      //addr.Device(),
 				      data.Device());
 
   /* Wait for completion */
   CUDA_SAFE_CALL(cudaDeviceSynchronize());
 
   /* Swap the f ptrs on the device */
-  SharedItem<DistField>::SwapDevicePointers(data.fOld, data.fNew);
+  // TODO: check this is working OK
+  std::swap(data.fOld, data.fNew);
 
   time_step++;
 }

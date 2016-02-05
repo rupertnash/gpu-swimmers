@@ -26,11 +26,11 @@ public:
     const int nDims = impl->nDims();
     const int nElems = impl->nElems();
     
-    view->buf = impl->baseData;
+    view->buf = impl->data;
     view->len = impl->indexer.size * nElems * sizeof(ElemType);
     view->readonly = std::is_const<ArrayType>::value;
     view->format = TypeHelper<ElemType>::format;
-    view->ndim = nDims;
+    view->ndim = nDims+1;
     view->itemsize = sizeof(ElemType);
 
     view->shape = new Py_ssize_t[nDims + 1];
