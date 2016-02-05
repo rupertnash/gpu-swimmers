@@ -38,11 +38,11 @@ public:
     view->suboffsets = NULL;
     for (size_t i = 0; i < nDims; ++i) {
       view->shape[i] = shape[i];
-      view->strides[i] = strides[i];
+      view->strides[i] = sizeof(ElemType) * strides[i];
     }
     view->shape[nDims] = nElems;
     // Needs factoring to allow layout switching
-    view->strides[nDims] = impl->Size();
+    view->strides[nDims] = sizeof(ElemType) * impl->Size();
 
     view->internal = NULL;
   }
