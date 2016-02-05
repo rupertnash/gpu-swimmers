@@ -6,7 +6,7 @@ cdef class ScalarList:
         self.impl = NULL
     cdef ScalarList Init(ScalarList self, _ScalarList* impl):
         self.impl = new _array.ArrayHelper[_ScalarList](impl)
-        self.data = np.asarray(self)
+        self.data = np.PyArray_FROM_O(self)
         return self
     def __getbuffer__(self, Py_buffer* buffer, int flags):
         self.impl.GetBuffer(buffer, flags)
@@ -32,7 +32,7 @@ cdef class VectorList:
         self.impl = NULL
     cdef VectorList Init(VectorList self, _VectorList* impl):
         self.impl = new _array.ArrayHelper[_VectorList](impl)
-        self.data = np.asarray(self)
+        self.data = np.PyArray_FROM_O(self)
         return self
     
     def __getbuffer__(self, Py_buffer* buffer, int flags):

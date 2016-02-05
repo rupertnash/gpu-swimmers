@@ -7,6 +7,6 @@ cdef class Array:
     cpdef Move(self, Lattice lat)
 
     cdef TracerArray.TracerArray* impl
-    cdef SharedVectorList r
-    cdef SharedVectorList s
-    cdef SharedVectorList v
+    cdef readonly SharedVectorList r
+    cdef readonly SharedVectorList s
+    cdef readonly SharedVectorList v

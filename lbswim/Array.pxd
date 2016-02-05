@@ -3,5 +3,5 @@ cimport _array
 cimport numpy as np
 
 cdef class Array:
-    cdef np.ndarray data
+    cdef readonly np.ndarray data
     pass

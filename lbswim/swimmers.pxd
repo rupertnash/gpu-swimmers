@@ -13,7 +13,7 @@ cdef class Array:
     cpdef Move(self, Lattice lat)
 
     cdef SwimmerArray.SwimmerArray* impl
-    cdef SharedVectorList r
-    cdef SharedVectorList v
-    cdef SharedVectorList n
+    cdef readonly SharedVectorList r
+    cdef readonly SharedVectorList v
+    cdef readonly SharedVectorList n
     cdef CommonParams common

@@ -27,7 +27,7 @@ public:
     const int nElems = impl->nElems();
     
     view->buf = impl->data;
-    view->len = impl->indexer.size * nElems * sizeof(ElemType);
+    view->len = impl->Size() * nElems * sizeof(ElemType);
     view->readonly = std::is_const<ArrayType>::value;
     view->format = TypeHelper<ElemType>::format;
     view->ndim = nDims+1;
@@ -42,7 +42,7 @@ public:
     }
     view->shape[nDims] = nElems;
     // Needs factoring to allow layout switching
-    view->strides[nDims] = impl->indexer.size;
+    view->strides[nDims] = impl->Size();
 
     view->internal = NULL;
   }
