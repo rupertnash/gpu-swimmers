@@ -6,9 +6,9 @@ cdef class Array:
     def __cinit__(self, int n):
         self.impl = new TracerArray.TracerArray(n)
         
-        self.r.ShInit(cython.address(self.impl.r))
-        self.s.ShInit(cython.address(self.impl.s))
-        self.v.ShInit(cython.address(self.impl.v))
+        self.r = SharedVectorList().ShInit(cython.address(self.impl.r))
+        self.s = SharedVectorList().ShInit(cython.address(self.impl.s))
+        self.v = SharedVectorList().ShInit(cython.address(self.impl.v))
         
         return
     
