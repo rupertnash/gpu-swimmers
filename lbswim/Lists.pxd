@@ -14,8 +14,8 @@ cdef class ScalarList(Array.Array):
 cdef class SharedScalarList(ScalarList):
     cdef _shared.SharedItem[_ScalarList]* shared_impl
     cdef SharedScalarList ShInit(SharedScalarList self, _shared.SharedItem[_ScalarList]* impl)
-    cdef void H2D(SharedScalarList self)
-    cdef void D2H(SharedScalarList self)
+    cpdef void H2D(SharedScalarList self)
+    cpdef void D2H(SharedScalarList self)
 
 cdef class VectorList(Array.Array):
     cdef _array.ArrayHelper[_VectorList]* impl
@@ -24,5 +24,5 @@ cdef class VectorList(Array.Array):
 cdef class SharedVectorList(VectorList):
     cdef _shared.SharedItem[_VectorList]* shared_impl
     cdef SharedVectorList ShInit(SharedVectorList self, _shared.SharedItem[_VectorList]* impl)
-    cdef void H2D(SharedVectorList self)
-    cdef void D2H(SharedVectorList self)
+    cpdef void H2D(SharedVectorList self)
+    cpdef void D2H(SharedVectorList self)

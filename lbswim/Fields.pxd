@@ -29,11 +29,11 @@ cdef class SharedScalarField(ScalarField):
 cdef class SharedVectorField(VectorField):
     cdef _shared.SharedItem[_VectorField]* shared_impl
     cdef SharedVectorField ShInit(SharedVectorField self, _shared.SharedItem[_VectorField]* impl)
-    cdef void H2D(SharedVectorField self)
-    cdef void D2H(SharedVectorField self)
+    cpdef void H2D(SharedVectorField self)
+    cpdef void D2H(SharedVectorField self)
 
 cdef class SharedDistField(DistField):
     cdef _shared.SharedItem[_DistField]* shared_impl
     cdef SharedDistField ShInit(SharedDistField self, _shared.SharedItem[_DistField]* impl)
-    cdef void H2D(SharedDistField self)
-    cdef void D2H(SharedDistField self)
+    cpdef void H2D(SharedDistField self)
+    cpdef void D2H(SharedDistField self)

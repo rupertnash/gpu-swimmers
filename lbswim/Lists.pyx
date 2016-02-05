@@ -22,9 +22,9 @@ cdef class SharedScalarList:
         ScalarList.Init(self, impl.Host())
         return self
     
-    cdef void H2D(SharedScalarList self):
+    cpdef void H2D(SharedScalarList self):
         self.shared_impl.H2D()
-    cdef void D2H(SharedScalarList self):
+    cpdef void D2H(SharedScalarList self):
         self.shared_impl.D2H()
 
 cdef class VectorList:
@@ -49,7 +49,7 @@ cdef class SharedVectorList:
         VectorList.Init(self, impl.Host())
         return self
     
-    cdef void H2D(SharedVectorList self):
+    cpdef void H2D(SharedVectorList self):
         self.shared_impl.H2D()
-    cdef void D2H(SharedVectorList self):
+    cpdef void D2H(SharedVectorList self):
         self.shared_impl.D2H()

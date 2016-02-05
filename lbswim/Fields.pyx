@@ -60,9 +60,9 @@ cdef class SharedVectorField:
         VectorField.Init(self, impl.Host())
         return self
     
-    cdef void H2D(SharedVectorField self):
+    cpdef void H2D(SharedVectorField self):
         self.shared_impl.H2D()
-    cdef void D2H(SharedVectorField self):
+    cpdef void D2H(SharedVectorField self):
         self.shared_impl.D2H()
 
 cdef class SharedDistField:
@@ -74,7 +74,7 @@ cdef class SharedDistField:
         DistField.Init(self, impl.Host())
         return self
     
-    cdef void H2D(SharedDistField self):
+    cpdef void H2D(SharedDistField self):
         self.shared_impl.H2D()
-    cdef void D2H(SharedDistField self):
+    cpdef void D2H(SharedDistField self):
         self.shared_impl.D2H()
