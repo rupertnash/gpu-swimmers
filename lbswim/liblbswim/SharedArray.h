@@ -18,9 +18,20 @@ class SharedItem< Array<T,ND,nElem> >
   T* device_data;
   size_t dataSize;
   
+  void Reset();
+  void Steal(const SharedItem&);
+  void Free();
  public:
   SharedItem();
   SharedItem(const ShapeType& shape);
+
+  // Disallow copy &  allow move in ctor and assign
+  SharedItem(const SharedItem&) = delete;
+  SharedItem(SharedItem&& other);
+
+  SharedItem& operator=(const SharedItem&) = delete;
+  SharedItem& operator=(SharedItem&& other);
+  
   ~SharedItem();
 
   SharedType* Host();

@@ -7,7 +7,7 @@
 #include "cucall.h"
 
 template<typename T, size_t ND, size_t nElem>
-SharedItem< Array<T, ND, nElem> >::SharedItem() {
+void SharedItem< Array<T, ND, nElem> >::Reset() {
   host = new SharedType();
   CUDA_SAFE_CALL(cudaMalloc(&device, sizeof(SharedType)));
   CUDA_SAFE_CALL(cudaMemcpy(device,
@@ -16,6 +16,27 @@ SharedItem< Array<T, ND, nElem> >::SharedItem() {
 			    cudaMemcpyHostToDevice));
   device_data = nullptr;
   dataSize = 0;
+}
+
+template<typename T, size_t ND, size_t nElem>
+void SharedItem< Array<T, ND, nElem> >::Steal(const SharedItem& other) {
+  host = other.host;
+  device = other.device;
+  device_data = other.device_data;
+  dataSize = other.dataSize;
+}
+
+template<typename T, size_t ND, size_t nElem>
+void SharedItem< Array<T, ND, nElem> >::Free() {
+  CUDA_SAFE_CALL(cudaFree(device_data));
+  CUDA_SAFE_CALL(cudaFree(device));
+  delete host;
+  dataSize = 0;
+}
+
+template<typename T, size_t ND, size_t nElem>
+SharedItem< Array<T, ND, nElem> >::SharedItem() {
+  Reset();
 }
 
 template<typename T, size_t ND, size_t nElem>
@@ -37,11 +58,30 @@ SharedItem< Array<T, ND, nElem> >::SharedItem(const ShapeType& shape) {
 			    cudaMemcpyHostToDevice));
 }
 
+// Move constructor
+template<typename T, size_t ND, size_t nElem>
+SharedItem< Array<T, ND, nElem> >::SharedItem(SharedItem&& other) {
+  // Steal other's resources
+  Steal(other);
+  // Reset other's members
+  other.Reset();
+}
+
+// Move assign
+template<typename T, size_t ND, size_t nElem>
+SharedItem< Array<T, ND, nElem > >& SharedItem< Array<T, ND, nElem> >::operator=(SharedItem&& other) {
+  // Free my resources
+  Free();
+  // Steal other's resources
+  Steal(other);  
+  // Reset other's members
+  other.Reset();
+  return *this;
+}
+
 template<typename T, size_t ND, size_t nElem>
 SharedItem< Array<T, ND, nElem> >::~SharedItem() {
-  CUDA_SAFE_CALL(cudaFree(device_data));
-  CUDA_SAFE_CALL(cudaFree(device));
-  delete host;
+  Free();
 }
 
 template<typename T, size_t ND, size_t nElem>

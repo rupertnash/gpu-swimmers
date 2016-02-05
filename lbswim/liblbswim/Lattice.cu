@@ -216,8 +216,7 @@ void Lattice::Step() {
   /* Wait for completion */
   CUDA_SAFE_CALL(cudaDeviceSynchronize());
 
-  /* Swap the f ptrs on the device */
-  // TODO: check this is working OK
+  /* Swap the distributions */
   std::swap(data.fOld, data.fNew);
 
   time_step++;
