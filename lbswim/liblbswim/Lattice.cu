@@ -202,163 +202,109 @@ void Lattice::Step() {
 }
 
 
-__global__ void DoCalcHydro(const LBParams& params, LDView data) {
-  const Shape siteIdx = {threadIdx.x + blockIdx.x * blockDim.x,
-			 threadIdx.y + blockIdx.y * blockDim.y,
-			 threadIdx.z + blockIdx.z * blockDim.z};
-
+__targetEntry__ void DoCalcHydro(const LBParams& params, LDView data) {
   const Shape& shape = data.rho->indexer.shape;
-  /* If we're out of bounds, skip */
-  for (size_t a=0; a<DQ_d; a++) {
-    if (siteIdx[a] >= shape[a])
-      return;
-  }
+  
+  FOR_TLP(shape) {
+    FOR_ILP(siteIdx) {
+      /* Indices for loops over dists/modes */
+      size_t m, p;
+      double mode[DQ_q];
 
-  /* Indices for loops over dists/modes */
-  size_t m, p;
-  double mode[DQ_q];
+      /* dists at time = t */
+      auto f_t = const_cast<const DistField*>(data.fOld)->operator[](siteIdx);
+      auto force = const_cast<const VectorField*>(data.force)->operator[](siteIdx);
+      auto u = data.u->operator[](siteIdx);
+      auto rho = data.rho->operator[](siteIdx);
 
-  /* dists at time = t */
-  auto f_t = const_cast<const DistField*>(data.fOld)->operator[](siteIdx);
-  auto force = const_cast<const VectorField*>(data.force)->operator[](siteIdx);
-  auto u = data.u->operator[](siteIdx);
-  auto rho = data.rho->operator[](siteIdx);
-
-  /* compute the modes */
-  for (m=0; m<DQ_q; m++) {
-    mode[m] = 0.;
-    for (p=0; p<DQ_q; p++) {
-      mode[m] += f_t[p] * params.mm[m][p];
+      /* compute the modes */
+      for (m=0; m<DQ_q; m++) {
+	mode[m] = 0.;
+	for (p=0; p<DQ_q; p++) {
+	  mode[m] += f_t[p] * params.mm[m][p];
+	}
+      }
+  
+      rho[0] = mode[DQ_rho];
+  
+      /* Work out the site fluid velocity
+       *   rho*u= (rho*u') + F*\Delta t /2
+       */
+      for (size_t a=0; a<DQ_d; a++) {
+	u[a] = (mode[DQ_mom(a)] + 0.5*force[a]) / mode[DQ_rho];
+      }
     }
-  }
-  
-  rho[0] = mode[DQ_rho];
-  
-  /* Work out the site fluid velocity
-   *   rho*u= (rho*u') + F*\Delta t /2
-   */
-  for (size_t a=0; a<DQ_d; a++) {
-    u[a] = (mode[DQ_mom(a)] + 0.5*force[a]) / mode[DQ_rho];
-  }
-	
+  }	
 }
 
 void Lattice::CalcHydro() {
-  const int bs = 8;
-
-  dim3 block_shape;
-  block_shape.x = bs;
-  block_shape.y = bs;
-  block_shape.z = bs;
-
-  dim3 num_blocks;
-  num_blocks.x = (shape[DQ_X] + block_shape.x - 1)/block_shape.x;
-  num_blocks.y = (shape[DQ_Y] + block_shape.y - 1)/block_shape.y;
-  num_blocks.z = (shape[DQ_Z] + block_shape.z - 1)/block_shape.z;
-
-  DoCalcHydro<<<num_blocks, block_shape>>>(params.Device(), data.Device());
+  targetLaunch(DoCalcHydro, shape)(params.Device(), data.Device());
+  targetSynchronize();
 }
 
-__global__ void DoInitFromHydro(const LBParams& params, LDView data) {
-  const Shape siteIdx = {threadIdx.x + blockIdx.x * blockDim.x,
-			 threadIdx.y + blockIdx.y * blockDim.y,
-			 threadIdx.z + blockIdx.z * blockDim.z};
-
+__targetEntry__ void DoInitFromHydro(const LBParams& params, LDView data) {
   const Shape& shape = data.rho->indexer.shape;
-  /* If we're out of bounds, skip */
-  for (size_t a=0; a<DQ_d; a++) {
-    if (siteIdx[a] >= shape[a])
-      return;
-  }
+  FOR_TLP(shape) {
+    FOR_ILP(siteIdx) {
+      /* dists at time = t */
+      auto f_t = data.fOld->operator[](siteIdx);
+      auto u = const_cast<const VectorField*>(data.u)->operator[](siteIdx);
+      auto rho = const_cast<const ScalarField*>(data.rho)->operator[](siteIdx)[0];
 
-  /* dists at time = t */
-  auto f_t = data.fOld->operator[](siteIdx);
-  auto u = const_cast<const VectorField*>(data.u)->operator[](siteIdx);
-  auto rho = const_cast<const ScalarField*>(data.rho)->operator[](siteIdx)[0];
+      /* Indices for loops over dists/modes */
+      size_t m, p;
+      /* Create the modes, all zeroed out */
+      array<double, DQ_q> mode;
 
-  /* Indices for loops over dists/modes */
-  size_t m, p;
-  /* Create the modes, all zeroed out */
-  array<double, DQ_q> mode;
-
-  /* Now set the equilibrium values */
-  /* Density */
-  mode[DQ_rho] = rho;
+      /* Now set the equilibrium values */
+      /* Density */
+      mode[DQ_rho] = rho;
   
-  /* Momentum */
-  for (size_t a=0; a<DQ_d; a++) {
-    mode[DQ_mom(a)] = rho * u[a];// - 0.5*force[a*nSites + ijk];
-  }
+      /* Momentum */
+      for (size_t a=0; a<DQ_d; a++) {
+	mode[DQ_mom(a)] = rho * u[a];// - 0.5*force[a*nSites + ijk];
+      }
 
-  /* Stress */
-  mode[DQ_SXX] = rho * u[DQ_X] * u[DQ_X];
-  mode[DQ_SXY] = rho * u[DQ_X] * u[DQ_Y];
-  mode[DQ_SXZ] = rho * u[DQ_X] * u[DQ_Z];
+      /* Stress */
+      mode[DQ_SXX] = rho * u[DQ_X] * u[DQ_X];
+      mode[DQ_SXY] = rho * u[DQ_X] * u[DQ_Y];
+      mode[DQ_SXZ] = rho * u[DQ_X] * u[DQ_Z];
   
-  mode[DQ_SYY] = rho * u[DQ_Y] * u[DQ_Y];
-  mode[DQ_SYZ] = rho * u[DQ_Y] * u[DQ_Z];
+      mode[DQ_SYY] = rho * u[DQ_Y] * u[DQ_Y];
+      mode[DQ_SYZ] = rho * u[DQ_Y] * u[DQ_Z];
   
-  mode[DQ_SZZ] = rho * u[DQ_Z] * u[DQ_Z];
+      mode[DQ_SZZ] = rho * u[DQ_Z] * u[DQ_Z];
 
-  /* Now project modes->dists */
-  for (p=0; p<DQ_q; p++) {
-    f_t[p] = 0.;
-    for (m=0; m<DQ_q; m++) {
-      f_t[p] += mode[m] * params.mmi[p][m];
+      /* Now project modes->dists */
+      for (p=0; p<DQ_q; p++) {
+	f_t[p] = 0.;
+	for (m=0; m<DQ_q; m++) {
+	  f_t[p] += mode[m] * params.mmi[p][m];
+	}
+      }
     }
   }
-
 }
 
 void Lattice::InitFromHydro() {
-  const int bs = 8;
-
-  dim3 block_shape;
-  block_shape.x = bs;
-  block_shape.y = bs;
-  block_shape.z = bs;
-
-  dim3 num_blocks;
-  num_blocks.x = (shape[DQ_X] + block_shape.x - 1)/block_shape.x;
-  num_blocks.y = (shape[DQ_Y] + block_shape.y - 1)/block_shape.y;
-  num_blocks.z = (shape[DQ_Z] + block_shape.z - 1)/block_shape.z;
-
-  DoInitFromHydro<<<num_blocks, block_shape>>>(params.Device(), data.Device());
+  targetLaunch(DoInitFromHydro, shape)(params.Device(), data.Device());
+  targetSynchronize();
 }
 
-__global__ void DoLatticeZeroForce(const LBParams& params, LDView data) {
-  const Shape siteIdx = {threadIdx.x + blockIdx.x * blockDim.x,
-			 threadIdx.y + blockIdx.y * blockDim.y,
-			 threadIdx.z + blockIdx.z * blockDim.z};
-
+__targetEntry__ void DoLatticeZeroForce(const LBParams& params, LDView data) {
   const Shape& shape = data.rho->indexer.shape;
-  /* If we're out of bounds, skip */
-  for (size_t a=0; a<DQ_d; a++) {
-    if (siteIdx[a] >= shape[a])
-      return;
-  }
-
-  /* dists at time = t */
-  auto force = data.force->operator[](siteIdx);
-  
-  for (size_t a=0; a<DQ_d; a++) {
-    force[a] = 0.0;
+  FOR_TLP(shape) {
+    auto& force = *data.force;
+    
+    for (size_t a=0; a<DQ_d; a++) {
+      FOR_ILP(siteIdx) {
+	force[siteIdx][a] = 0.0;
+      }
+    }
   }
 }
 
 void Lattice::ZeroForce() {
-  const int bs = 8;
-
-  dim3 block_shape;
-  block_shape.x = bs;
-  block_shape.y = bs;
-  block_shape.z = bs;
-
-  dim3 num_blocks;
-  num_blocks.x = (shape[DQ_X] + block_shape.x - 1)/block_shape.x;
-  num_blocks.y = (shape[DQ_Y] + block_shape.y - 1)/block_shape.y;
-  num_blocks.z = (shape[DQ_Z] + block_shape.z - 1)/block_shape.z;
-
-  DoLatticeZeroForce<<<num_blocks, block_shape>>>(params.Device(), data.Device());
+  targetLaunch(DoLatticeZeroForce,shape)(params.Device(), data.Device());
 }
 
