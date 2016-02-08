@@ -8,7 +8,7 @@
 
 template<typename Indexable>
 __device__ array<double,DQ_d> InterpVelocity(const VectorField& lat_u,
-			       Indexable r) {
+			       const Indexable& r) {
   auto n = lat_u.indexer.shape;
   int indices[DQ_d][4];
   double deltas[DQ_d][4];

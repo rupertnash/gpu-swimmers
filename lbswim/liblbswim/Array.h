@@ -257,9 +257,41 @@ struct Array
     data = new T[total_size];
   }
 
-  // Explicitly disallow copying (via constructor or assignment)
-  Array(const Array&) = delete;
-  Array& operator=(const Array&) = delete;
+  Array(const Array& other) : indexer(other.indexer), data(other.data), owner(false)
+  {
+  }
+  
+  Array& operator=(const Array& other) {
+    if (owner) 
+      delete[] data;
+    
+    indexer = other.indexer;
+    data = other.data;
+    owner = false;
+    return *this;
+  }
+
+  Array(Array&& other) : indexer(other.indexer), data(other.data), owner(other.owner) 
+  {
+    other.indexer = IdxType();
+    other.data = nullptr;
+    other.owner = false;
+  }
+  
+  Array& operator=(Array&& other) {
+    if (owner) 
+      delete[] data;
+    
+    indexer = other.indexer;
+    data = other.data;
+    owner = other.owner;
+    
+    other.indexer = IdxType();
+    other.data = nullptr;
+    other.owner = false;
+    
+    return *this;
+  }
   
   BOTH ~Array() {
     if (owner) {
