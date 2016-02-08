@@ -2,7 +2,7 @@
 #ifndef array_H
 #define array_H
 
-#include "cuhelp.h"
+#include "_target.h"
 
 /* Minimal CUDA-compatible std::array replacement */
 
@@ -18,7 +18,12 @@ class array
     data[i] = a;
     Init(i+1, args...);
   }
+
 public:
+  BOTH static constexpr size_t size() {
+    return N;
+  }
+  
   BOTH array() {
     for (size_t i = 0; i<N; ++i)
       data[i] = T();
@@ -37,5 +42,15 @@ public:
     return data[i];
   }
 };
+
+template <typename T, size_t N>
+BOTH bool operator!=(const array<T,N>& a, const array<T,N>& b) {
+
+  for (size_t i = 0; i< N; ++i) {
+    if (a[i] != b[i])
+      return true;
+  }
+  return false;
+}
 
 #endif
