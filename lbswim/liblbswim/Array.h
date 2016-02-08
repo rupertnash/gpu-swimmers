@@ -7,7 +7,7 @@
 #ifndef ARRAY_H
 #define ARRAY_H
 
-#include "cuhelp.h"
+#include "targetpp.h"
 
 #include "array.h"
 #include <memory>
@@ -256,6 +256,11 @@ struct Array
     size_t total_size = nElem * indexer.size;
     data = new T[total_size];
   }
+
+  // Explicitly disallow copying (via constructor or assignment)
+  Array(const Array&) = delete;
+  Array& operator=(const Array&) = delete;
+  
   BOTH ~Array() {
     if (owner) {
       delete[] data;
