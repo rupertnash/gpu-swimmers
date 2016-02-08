@@ -3,86 +3,49 @@
 #define SHAREDITEM_HPP
 
 #include "SharedItem.h"
-#include "cucall.h"
+#include "targetpp.h"
 
 template<typename T>
 void SharedItem<T>::DevAlloc() {
-  CUDA_SAFE_CALL(cudaMalloc(&device, sizeof(T)));
+  targetMalloc(device, sizeof(T));
 }
 
 template <typename T>
 SharedItem<T>::~SharedItem() {
   delete host;
-  CUDA_SAFE_CALL(cudaFree(device));
+  targetFree(device);
 }
+
 template <typename T>
 void SharedItem<T>::H2D() {
-  CUDA_SAFE_CALL(cudaMemcpy(device,
-			    host,
-			    sizeof(T),
-			    cudaMemcpyHostToDevice));
+  copyToTarget(device,
+	       host,
+	       sizeof(T));
 }
+
 template <typename T>
 void SharedItem<T>::D2H() {
-  CUDA_SAFE_CALL(cudaMemcpy(host,
-			    device,
-			    sizeof(T),
-			    cudaMemcpyDeviceToHost));
+  copyFromTarget(host,
+		 device,
+		 sizeof(T));
 }
 
 template <typename T>
-T* SharedItem<T>::Host() {
-  return host;
-}
-template <typename T>
-const T* SharedItem<T>::Host() const {
-  return host;
-}
-
-template <typename T>
-T* SharedItem<T>::Device() {
-  return device;
-}
-template <typename T>
-const T* SharedItem<T>::Device() const {
-  return device;
-}
-  
-
-template <typename T>
-T& SharedItem<T>::operator*() {
-#ifdef __CUDA_ARCH__
-  return *device;
-#else
+T& SharedItem<T>::Host() {
   return *host;
-#endif
 }
-
 template <typename T>
-const T& SharedItem<T>::operator*() const {
-#ifdef __CUDA_ARCH__
-  return *device;
-#else
+const T& SharedItem<T>::Host() const {
   return *host;
-#endif
 }
 
 template <typename T>
-T* SharedItem<T>::operator->() {
-#ifdef __CUDA_ARCH__
-  return device;
-#else
-  return host;
-#endif
+T& SharedItem<T>::Device() {
+  return *device;
 }
-
 template <typename T>
-const T* SharedItem<T>::operator->() const {
-#ifdef __CUDA_ARCH__
-  return device;
-#else
-  return host;
-#endif
+const T& SharedItem<T>::Device() const {
+  return *device;
 }
 
 #endif // SHAREDITEM_HPP

@@ -34,15 +34,14 @@ class SharedItem< Array<T,ND,nElem> >
   
   ~SharedItem();
 
-  SharedType* Host();
-  SharedType* Device();
+  SharedType& Host();
+  SharedType& Device();
   
-  const SharedType* Host() const;
-  const SharedType* Device() const;
+  const SharedType& Host() const;
+  const SharedType& Device() const;
   void H2D();
   void D2H();
 
-  static void SwapDevicePointers(SharedItem& a, SharedItem&b);
 };
 
 #endif

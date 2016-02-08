@@ -23,17 +23,12 @@ public:
   void H2D();
   void D2H();
 
-  T* Host();
-  const T* Host() const;
+  T& Host();
+  const T& Host() const;
 
-  T* Device();
-  const T* Device() const;
+  T& Device();
+  const T& Device() const;
   
-  T* operator->();
-  const T* operator->() const;
-
-  T& operator*();
-  const T& operator*() const;
 };
 
 #endif
