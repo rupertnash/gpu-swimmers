@@ -1,4 +1,8 @@
 # Do the CUDA library first
+
+set(TARGETDP_SOURCE_DIR ""
+  CACHE path "Path to the targetDP source")
+
 add_subdirectory( liblbswim )
 
 include(UseCython)
@@ -10,7 +14,7 @@ FILE(GLOB PYX_SOURCES ${CMAKE_CURRENT_SOURCE_DIR} *.pyx)
 set_source_files_properties(${PYX_SOURCES}
   PROPERTIES CYTHON_IS_CXX TRUE)
 
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/liblbswim ${NUMPY_INCLUDE_DIRS} ${TARGETDP_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/liblbswim ${NUMPY_INCLUDE_DIRS} ${TARGETDP_SOURCE_DIR})
 add_compile_options(--std=c++11)
 
 foreach(basename Array Fields Lists lb swimmers tracers)
