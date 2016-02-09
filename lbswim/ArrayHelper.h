@@ -6,9 +6,9 @@
 
 template<typename T>
 struct TypeHelper {
-  static char* format;
+  static const char* format;
 };
-template<> char* TypeHelper<double>::format = "d";
+template<> const char* TypeHelper<double>::format = "d";
 
 template<typename ArrayType>
 class ArrayHelper {
@@ -29,7 +29,8 @@ public:
     view->buf = impl.data;
     view->len = impl.Size() * nElems * sizeof(ElemType);
     view->readonly = std::is_const<ArrayType>::value;
-    view->format = TypeHelper<ElemType>::format;
+    // This is OK because Python promises not to alter this string
+    view->format = const_cast<char*>(TypeHelper<ElemType>::format);
     view->ndim = nDims+1;
     view->itemsize = sizeof(ElemType);
 
