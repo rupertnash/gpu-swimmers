@@ -122,22 +122,12 @@ public:
   // Get an element
   BOTH T& operator[](const size_t& i) {
     if (i >= nElem)
-#ifdef __CUDA_ARCH__
-      assert(false);
-#else
-      throw std::out_of_range("Out of range");
-#endif
-    return data[i * stride];
+      return data[i * stride];
   }
   // Get a const element
   BOTH const T& operator[](const size_t& i) const {
     if (i >= nElem)
-#ifdef __CUDA_ARCH__
-      assert(false);
-#else
-      throw std::out_of_range("Out of range");
-#endif
-    return data[i * stride];
+      return data[i * stride];
   }
 };
 
