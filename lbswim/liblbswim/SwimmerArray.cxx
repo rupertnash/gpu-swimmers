@@ -1,9 +1,8 @@
-// -*- mode: C++; -*-
 #include <curand_kernel.h>
+#include <cmath>
+
 #include "SwimmerArray.h"
-#include <math.h>
-#include "delta.cu"
-#include "interp.cu"
+#include "interp.h"
 
 __targetEntry__ void DoInitPrng(const unsigned long long seed,
 			   RandList& prngs) {

@@ -121,13 +121,11 @@ struct ElemWrapper
 public:
   // Get an element
   BOTH T& operator[](const size_t& i) {
-    if (i >= nElem)
-      return data[i * stride];
+    return data[i * stride];
   }
   // Get a const element
   BOTH const T& operator[](const size_t& i) const {
-    if (i >= nElem)
-      return data[i * stride];
+    return data[i * stride];
   }
 };
 

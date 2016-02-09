@@ -1,4 +1,3 @@
-// -*- mode: C++; -*-
 #include <stdio.h>
 #include <stdlib.h>
 #include <utility>
@@ -8,7 +7,7 @@
 #include "targetpp.h"
 
 // This defines the LatticeEigenSet() for the D3Q15 velocity set
-#include "d3q15.c"
+#include "d3q15.cxx"
 
 LatticeData::LatticeData(const Shape& shape) : rho(shape),
 					       u(shape),

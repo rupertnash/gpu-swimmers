@@ -1,7 +1,6 @@
-// -*- mode: C++; -*-
 #include "TracerArray.h"
-#include <math.h>
-#include "interp.cu"
+#include <cmath>
+#include "interp.h"
 
 TracerArray::TracerArray(const size_t num_) : 
   num(num_),
@@ -28,7 +27,7 @@ __targetEntry__ void DoTracerArrayMove(VectorList& part_r,
 	part_v[iPart][d] = fluid_v[d];
 	part_r[iPart][d] += fluid_v[d];
 	/* deal with PBC */
-	part_r[iPart][d] = fmod(part_r[iPart][d] + size[d], double(size[d]));
+	part_r[iPart][d] = std::fmod(part_r[iPart][d] + size[d], double(size[d]));
 	/* and then update the unwrapped coords */
 	part_s[iPart][d] += fluid_v[d];
       }

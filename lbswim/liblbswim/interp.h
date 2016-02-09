@@ -1,10 +1,33 @@
 // -*- mode: C++; -*-
-#ifndef INTERP_CU
-#define INTERP_CU
+#ifndef INTERP_H
+#define INTERP_H
+
+#include <cmath>
 
 #include "Lattice.h"
-#include "delta.cu"
 #include "array.h"
+
+
+template<typename Float>
+__device__ Float peskin_delta(Float x) {
+  Float abs_x = std::fabs(x);
+  Float root = -4. * x*x;
+  Float phi = -2.* abs_x;
+  
+  if (abs_x >= 2.0)
+    return 0.;
+  
+  if (abs_x >= 1.0) {
+    root += 12. * abs_x - 7.;
+    phi += 5.;
+    phi -= std::sqrt(root);
+  } else {
+    root += 4. * abs_x + 1;
+    phi += 3.;
+    phi += std::sqrt(root);
+  }
+  return 0.125 * phi;
+}
 
 template<typename Indexable>
 __device__ array<double,DQ_d> InterpVelocity(const VectorField& lat_u,

@@ -5,9 +5,9 @@
 #include "SharedItem.hpp"
 #include "SharedArray.hpp"
 
-#include "Lattice.cu"
-#include "SwimmerArray.cu"
-#include "TracerArray.cu"
+#include "Lattice.cxx"
+#include "SwimmerArray.cxx"
+#include "TracerArray.cxx"
 
 template class SharedItem<ScalarList>;
 template class SharedItem<VectorList>;
