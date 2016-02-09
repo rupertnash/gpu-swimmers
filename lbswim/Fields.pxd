@@ -10,15 +10,15 @@ ctypedef _array.Array[double, DQ_d, DQ_q] _DistField
 
 cdef class ScalarField(Array.Array):
     cdef _array.ArrayHelper[_ScalarField]* impl
-    cdef ScalarField Init(ScalarField self, _ScalarField* impl)
+    cdef ScalarField Init(ScalarField self, _ScalarField& impl)
 
 cdef class VectorField(Array.Array):
     cdef _array.ArrayHelper[_VectorField]* impl
-    cdef VectorField Init(VectorField self, _VectorField* impl)
+    cdef VectorField Init(VectorField self, _VectorField& impl)
 
 cdef class DistField(Array.Array):
     cdef _array.ArrayHelper[_DistField]* impl
-    cdef DistField Init(DistField self, _DistField* impl)
+    cdef DistField Init(DistField self, _DistField& impl)
 
 cdef class SharedScalarField(ScalarField):
     cdef _shared.SharedItem[_ScalarField]* shared_impl

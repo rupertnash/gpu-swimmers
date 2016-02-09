@@ -69,7 +69,7 @@ cdef class CommonParams:
     
     def __reduce__(self):
         params = {}
-        cdef SwimmerArray.CommonParams* tmp = self.impl.Host()
+        cdef SwimmerArray.CommonParams tmp = self.impl.Host()
         params['P'] = tmp.P 
         params['l'] = tmp.l
         params['alpha'] = tmp.alpha
@@ -83,7 +83,7 @@ cdef class CommonParams:
                 params)
     
     def __setstate__(self, params):
-        cdef SwimmerArray.CommonParams* tmp = self.impl.Host()
+        cdef SwimmerArray.CommonParams tmp = self.impl.Host()
         tmp.P = params['P']
         tmp.l = params['l']
         tmp.alpha = params['alpha']
@@ -95,7 +95,7 @@ cdef class CommonParams:
         
 cdef class Array:
     def __cinit__(self, int n, CommonParams cp):
-        self.impl = new SwimmerArray.SwimmerArray(n, cp.impl.Host())
+        self.impl = new SwimmerArray.SwimmerArray(n, cython.address(cp.impl.Host()))
 
         self.r = SharedVectorList().ShInit(cython.address(self.impl.r))
         self.v = SharedVectorList().ShInit(cython.address(self.impl.v))

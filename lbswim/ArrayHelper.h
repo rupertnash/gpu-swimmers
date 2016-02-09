@@ -15,19 +15,19 @@ class ArrayHelper {
   typedef typename ArrayType::ShapeType ShapeType;
   typedef typename ArrayType::ElemType ElemType;
 
-  ArrayType* impl;
+  ArrayType& impl;
 public:
-  ArrayHelper(ArrayType* impl_) : impl(impl_)
+  ArrayHelper(ArrayType& impl_) : impl(impl_)
   {}
 
   void GetBuffer(Py_buffer* view, int flags) {
-    const ShapeType& shape = impl->Shape();
-    const ShapeType& strides = impl->Strides();
-    const int nDims = impl->nDims();
-    const int nElems = impl->nElems();
+    const ShapeType& shape = impl.Shape();
+    const ShapeType& strides = impl.Strides();
+    const int nDims = impl.nDims();
+    const int nElems = impl.nElems();
     
-    view->buf = impl->data;
-    view->len = impl->Size() * nElems * sizeof(ElemType);
+    view->buf = impl.data;
+    view->len = impl.Size() * nElems * sizeof(ElemType);
     view->readonly = std::is_const<ArrayType>::value;
     view->format = TypeHelper<ElemType>::format;
     view->ndim = nDims+1;
@@ -42,7 +42,7 @@ public:
     }
     view->shape[nDims] = nElems;
     // Needs factoring to allow layout switching
-    view->strides[nDims] = sizeof(ElemType) * impl->Size();
+    view->strides[nDims] = sizeof(ElemType) * impl.Size();
 
     view->internal = NULL;
   }

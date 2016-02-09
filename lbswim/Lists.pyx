@@ -4,7 +4,7 @@ np.import_array()
 cdef class ScalarList:
     def __cinit__(self):
         self.impl = NULL
-    cdef ScalarList Init(ScalarList self, _ScalarList* impl):
+    cdef ScalarList Init(ScalarList self, _ScalarList& impl):
         self.impl = new _array.ArrayHelper[_ScalarList](impl)
         self.data = np.PyArray_FROM_O(self)
         return self
@@ -30,7 +30,7 @@ cdef class SharedScalarList:
 cdef class VectorList:
     def __cinit__(self):
         self.impl = NULL
-    cdef VectorList Init(VectorList self, _VectorList* impl):
+    cdef VectorList Init(VectorList self, _VectorList& impl):
         self.impl = new _array.ArrayHelper[_VectorList](impl)
         self.data = np.PyArray_FROM_O(self)
         return self

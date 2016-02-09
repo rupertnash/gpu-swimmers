@@ -4,7 +4,7 @@ np.import_array()
 cdef class ScalarField:
     def __cinit__(self):
         self.impl = NULL
-    cdef ScalarField Init(ScalarField self, _ScalarField* impl):
+    cdef ScalarField Init(ScalarField self, _ScalarField& impl):
         self.impl = new _array.ArrayHelper[_ScalarField](impl)
         self.data = np.PyArray_FROM_O(self)
         return self
@@ -17,7 +17,7 @@ cdef class ScalarField:
 cdef class VectorField:
     def __cinit__(self):
         self.impl = NULL
-    cdef VectorField Init(VectorField self, _VectorField* impl):
+    cdef VectorField Init(VectorField self, _VectorField& impl):
         self.impl = new _array.ArrayHelper[_VectorField](impl)
         self.data = np.PyArray_FROM_O(self)
         return self
@@ -29,7 +29,7 @@ cdef class VectorField:
 cdef class DistField:
     def __cinit__(self):
         self.impl = NULL
-    cdef DistField Init(DistField self, _DistField* impl):
+    cdef DistField Init(DistField self, _DistField& impl):
         self.impl = new _array.ArrayHelper[_DistField](impl)
         self.data = np.PyArray_FROM_O(self)
         return self

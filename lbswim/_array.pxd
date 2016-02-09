@@ -20,6 +20,6 @@ cdef extern from "Array.h":
 
 cdef extern from "ArrayHelper.h":
     cdef cppclass ArrayHelper[ArrayType]:
-        ArrayHelper(ArrayType* impl_)
+        ArrayHelper(ArrayType& impl_)
         void GetBuffer(Py_buffer* view, int flags)
         void ReleaseBuffer(Py_buffer* view)

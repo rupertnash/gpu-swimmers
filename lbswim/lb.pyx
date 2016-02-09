@@ -131,7 +131,7 @@ cdef class Lattice:
     def params(self):
         if self._params is None:
             self._params = LBParams()
-            self._params.impl = self.impl.params.Host()
+            self._params.impl = cython.address(self.impl.params.Host())
             self._params.lat = self
         return self._params
     
