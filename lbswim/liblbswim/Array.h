@@ -7,7 +7,7 @@
 #ifndef ARRAY_H
 #define ARRAY_H
 
-#include "targetpp.h"
+#include "_target.h"
 
 #include "array.h"
 #include <memory>

@@ -8,8 +8,12 @@
 #define __targetHost__ __host__
 #endif
 
-#define TARGET __target__
+#ifdef HOST
+#undef HOST
+#endif
 #define HOST __targetHost__
+
+#define TARGET __target__
 #define BOTH TARGET HOST
 
 #endif
