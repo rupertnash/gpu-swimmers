@@ -18,6 +18,7 @@ class SharedItem< Array<T,ND,nElem> >
   T* device_data;
   size_t dataSize;
   
+  // Helpers for implementing move semantics
   void Reset();
   void Steal(const SharedItem&);
   void Free();
@@ -25,7 +26,7 @@ class SharedItem< Array<T,ND,nElem> >
   SharedItem();
   SharedItem(const ShapeType& shape);
 
-  // Disallow copy &  allow move in ctor and assign
+  // Disallow copy & allow move in ctor and assign
   SharedItem(const SharedItem&) = delete;
   SharedItem(SharedItem&& other);
 

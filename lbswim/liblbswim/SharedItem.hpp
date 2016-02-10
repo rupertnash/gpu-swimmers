@@ -3,31 +3,29 @@
 #define SHAREDITEM_HPP
 
 #include "SharedItem.h"
-#include "targetpp.h"
+#include "target/targetpp.h"
 
 template<typename T>
 void SharedItem<T>::DevAlloc() {
-  targetMalloc(device, sizeof(T));
+  target::malloc(device);
 }
 
 template <typename T>
 SharedItem<T>::~SharedItem() {
   delete host;
-  targetFree(device);
+  target::free(device);
 }
 
 template <typename T>
 void SharedItem<T>::H2D() {
-  copyToTarget(device,
-	       host,
-	       sizeof(T));
+  target::copyIn(device,
+		 host);
 }
 
 template <typename T>
 void SharedItem<T>::D2H() {
-  copyFromTarget(host,
-		 device,
-		 sizeof(T));
+  target::copyOut(host,
+		  device);
 }
 
 template <typename T>

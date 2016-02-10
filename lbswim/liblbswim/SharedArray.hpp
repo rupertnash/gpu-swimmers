@@ -4,15 +4,14 @@
 
 #include "SharedArray.h"
 
-#include "targetpp.h"
+#include "target/targetpp.h"
 
 template<typename T, size_t ND, size_t nElem>
 void SharedItem< Array<T, ND, nElem> >::Reset() {
   host = new SharedType();
-  targetMalloc(device, sizeof(SharedType));
-  copyToTarget(device,
-	       host,
-	       sizeof(SharedType));
+  target::malloc(device);
+  target::copyIn(device,
+		 host);
   device_data = nullptr;
   dataSize = 0;
 }
@@ -27,8 +26,8 @@ void SharedItem< Array<T, ND, nElem> >::Steal(const SharedItem& other) {
 
 template<typename T, size_t ND, size_t nElem>
 void SharedItem< Array<T, ND, nElem> >::Free() {
-  targetFree(device_data);
-  targetFree(device);
+  target::free(device_data);
+  target::free(device);
   delete host;
   dataSize = 0;
 }
@@ -41,19 +40,18 @@ SharedItem< Array<T, ND, nElem> >::SharedItem() {
 template<typename T, size_t ND, size_t nElem>
 SharedItem< Array<T, ND, nElem> >::SharedItem(const ShapeType& shape) {
   host = new SharedType(shape);
-  targetMalloc(device, sizeof(SharedType));
+  target::malloc(device);
 
-  dataSize = host->Size() * nElem * sizeof(T);
-  targetMalloc(device_data, dataSize);
+  dataSize = host->Size() * nElem;
+  target::malloc(device_data, dataSize);
   
   SharedType tmp;
   tmp.indexer = host->indexer;
   tmp.data = device_data;
   tmp.owner = false;
 
-  copyToTarget(device,
-	       &tmp,
-	       sizeof(SharedType));
+  target::copyIn(device,
+		 &tmp);
 }
 
 // Move constructor
@@ -103,16 +101,16 @@ const Array<T, ND, nElem>& SharedItem< Array<T, ND, nElem> >::Device() const {
 
 template<typename T, size_t ND, size_t nElem>
 void SharedItem< Array<T, ND, nElem> >::H2D() {
-  copyToTarget(device_data,
-	       host->data,
-	       dataSize);
+  target::copyIn(device_data,
+		 host->data,
+		 dataSize);
 }
 
 template<typename T, size_t ND, size_t nElem>
 void SharedItem< Array<T, ND, nElem> >::D2H() {
-  copyFromTarget(host->data,
-		 device_data,
-		 dataSize);
+  target::copyOut(host->data,
+		  device_data,
+		  dataSize);
 }
 
 #endif // SHAREDARRAY_HPP

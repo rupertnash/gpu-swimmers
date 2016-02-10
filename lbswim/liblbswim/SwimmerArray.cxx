@@ -20,7 +20,7 @@ SwimmerArray::SwimmerArray(const size_t num_, const CommonParams* p) :
   r(array<size_t,1>{num_}), v(array<size_t,1>{num_}), n(array<size_t,1>{num_}),
   prng(array<size_t,1>{num})
 {
-  targetLaunch(DoInitPrng, prng.Host().Shape())(p->seed, prng.Device());
+  target::launch(DoInitPrng, prng.Host().Shape())(p->seed, prng.Device());
   // pull state to host
   prng.D2H();
 }
@@ -110,10 +110,10 @@ __global__ void DoSwimmerArrayAddForces(const CommonParams& p,
 }
 
 void SwimmerArray::AddForces(Lattice* lat) const {
-  targetLaunch(DoSwimmerArrayAddForces, r.Host().Shape())(common.Device(),
+  target::launch(DoSwimmerArrayAddForces, r.Host().Shape())(common.Device(),
 							  r.Device(), n.Device(),
 							  lat->data.force.Device());
-  targetSynchronize();
+  target::synchronize();
 }
 
 __targetEntry__ void DoSwimmerArrayMove(const CommonParams& common,
@@ -201,9 +201,9 @@ __targetEntry__ void DoSwimmerArrayMove(const CommonParams& common,
 }
 
 void SwimmerArray::Move(Lattice* lat) {
-  targetLaunch(DoSwimmerArrayMove, r.Host().Shape())(common.Device(),
+  target::launch(DoSwimmerArrayMove, r.Host().Shape())(common.Device(),
 						     r.Device(), v.Device(), n.Device(),
 						     prng.Device(),
 						     lat->data.u.Device());
-  targetSynchronize();
+  target::synchronize();
 }

@@ -36,6 +36,6 @@ __targetEntry__ void DoTracerArrayMove(VectorList& part_r,
 }
 
 void TracerArray::Move(Lattice* lat) {
-  targetLaunch(DoTracerArrayMove, r.Host().Shape())(r.Device(), s.Device(), v.Device(),
+  target::launch(DoTracerArrayMove, r.Host().Shape())(r.Device(), s.Device(), v.Device(),
 						    lat->data.u.Device());
 }

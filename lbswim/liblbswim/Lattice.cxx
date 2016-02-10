@@ -4,7 +4,7 @@
 
 #include "Lattice.h"
 #include "d3q15.h"
-#include "targetpp.h"
+#include "target/targetpp.h"
 
 // This defines the LatticeEigenSet() for the D3Q15 velocity set
 #include "d3q15.cxx"
@@ -189,10 +189,10 @@ __targetEntry__ void DoStep(const LBParams& params, LDView data) {
 
 void Lattice::Step() {
   // Call the target kernel
-  targetLaunch(DoStep, shape)(params.Device(), data.Device());
+  target::launch(DoStep, shape)(params.Device(), data.Device());
   
   // Wait for completion
-  targetSynchronize();
+  target::synchronize();
 
   // Swap the distributions
   std::swap(data.fOld, data.fNew);
@@ -237,8 +237,8 @@ __targetEntry__ void DoCalcHydro(const LBParams& params, LDView data) {
 }
 
 void Lattice::CalcHydro() {
-  targetLaunch(DoCalcHydro, shape)(params.Device(), data.Device());
-  targetSynchronize();
+  target::launch(DoCalcHydro, shape)(params.Device(), data.Device());
+  target::synchronize();
 }
 
 __targetEntry__ void DoInitFromHydro(const LBParams& params, LDView data) {
@@ -286,8 +286,8 @@ __targetEntry__ void DoInitFromHydro(const LBParams& params, LDView data) {
 }
 
 void Lattice::InitFromHydro() {
-  targetLaunch(DoInitFromHydro, shape)(params.Device(), data.Device());
-  targetSynchronize();
+  target::launch(DoInitFromHydro, shape)(params.Device(), data.Device());
+  target::synchronize();
 }
 
 __targetEntry__ void DoLatticeZeroForce(const LBParams& params, LDView data) {
@@ -304,6 +304,6 @@ __targetEntry__ void DoLatticeZeroForce(const LBParams& params, LDView data) {
 }
 
 void Lattice::ZeroForce() {
-  targetLaunch(DoLatticeZeroForce,shape)(params.Device(), data.Device());
+  target::launch(DoLatticeZeroForce,shape)(params.Device(), data.Device());
 }
 

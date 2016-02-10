@@ -7,7 +7,7 @@
 #ifndef ARRAY_H
 #define ARRAY_H
 
-#include "_target.h"
+#include "target/func_attr.h"
 
 #include "array.h"
 #include <memory>
@@ -21,7 +21,7 @@ template <size_t ND>
 struct AoSSpaceLayoutPolicy
 {
   typedef array<size_t, ND> ShapeType;
-  BOTH static ShapeType MakeStrides(const ShapeType& shape)
+  __targetBoth__ static ShapeType MakeStrides(const ShapeType& shape)
   {
     ShapeType strides;
     strides[ND-1] = 1;
@@ -35,7 +35,7 @@ template <size_t ND>
 struct SoASpaceLayoutPolicy
 {
   typedef std::array<size_t, ND> ShapeType;
-  BOTH static ShapeType MakeStrides(const ShapeType& shape)
+  __targetBoth__ static ShapeType MakeStrides(const ShapeType& shape)
   {
     ShapeType strides;
     strides[ND-1] = 1;
@@ -50,7 +50,7 @@ template <size_t ND>
 using SpaceLayoutPolicy = AoSSpaceLayoutPolicy<ND>;
 
 template <class T, size_t ND>
-BOTH T Product(const array<T,ND>& arr) {
+__targetBoth__ T Product(const array<T,ND>& arr) {
   T ans = 1;
   for (size_t i = 0; i < ND; ++i) 
     ans *= arr[i];
@@ -68,19 +68,19 @@ struct SpaceIndexer
   ShapeType strides;
   size_t size;
   
-  BOTH SpaceIndexer() : shape(), strides(), size(0)
+  __targetBoth__ SpaceIndexer() : shape(), strides(), size(0)
   {
   }
   
   // Construct for a given shape array.
-  BOTH SpaceIndexer(const ShapeType& shp) : shape(shp),
+  __targetBoth__ SpaceIndexer(const ShapeType& shp) : shape(shp),
 					    strides(SpaceLayoutPolicy<ND>::MakeStrides(shp)),
 					    size(Product(shp))
   {
   }
   
   // Compute 1D index from ND index
-  BOTH size_t operator()(const ShapeType& idx) const {
+  __targetBoth__ size_t operator()(const ShapeType& idx) const {
     size_t ijk = 0;
     for (size_t d = 0; d < ND; ++d)
       ijk += strides[d]*idx[d];
@@ -90,7 +90,7 @@ struct SpaceIndexer
   // Helper for subscripting - given a parent array of the next higher
   // dimensionality return an indexer for an array slice taken along
   // the first dimension.
-  BOTH static SpaceIndexer ReduceFrom(const SpaceIndexer<ND+1>& parent) {
+  __targetBoth__ static SpaceIndexer ReduceFrom(const SpaceIndexer<ND+1>& parent) {
     SpaceIndexer ans;
     for (size_t i=0; i<ndims; ++i) {
       ans.shape[i] = parent.shape[i+1];
@@ -120,17 +120,17 @@ struct ElemWrapper
 
 public:
   // Get an element
-  BOTH T& operator[](const size_t& i) {
+  __targetBoth__ T& operator[](const size_t& i) {
     return data[i * stride];
   }
   // Get a const element
-  BOTH const T& operator[](const size_t& i) const {
+  __targetBoth__ const T& operator[](const size_t& i) const {
     return data[i * stride];
   }
 };
 
 template<typename T, size_t ND, size_t nElem>
-BOTH typename Array<T, ND, nElem>::SubType Helper(Array<T, ND, nElem>& self, const size_t i) {
+__targetBoth__ typename Array<T, ND, nElem>::SubType Helper(Array<T, ND, nElem>& self, const size_t i) {
   Array<T, ND-1, nElem> ans;
   ans.data = self.data + i * self.indexer.strides[0];
   ans.owner = false;
@@ -139,7 +139,7 @@ BOTH typename Array<T, ND, nElem>::SubType Helper(Array<T, ND, nElem>& self, con
 }
 
 template<typename T, size_t nElem>
-BOTH typename Array<T, 1, nElem>::SubType Helper(Array<T, 1, nElem>& self, const size_t i) {
+__targetBoth__ typename Array<T, 1, nElem>::SubType Helper(Array<T, 1, nElem>& self, const size_t i) {
   ElemWrapper<T, nElem> ans;
   ans.data = self.data + i * self.indexer.strides[0];
   // Refactor to allow layout switching
@@ -147,7 +147,7 @@ BOTH typename Array<T, 1, nElem>::SubType Helper(Array<T, 1, nElem>& self, const
   return ans;
 }
 template<typename T, size_t ND, size_t nElem>
-BOTH typename Array<T, ND, nElem>::ConstSubType Helper(const Array<T, ND, nElem>& self, const size_t i) {
+__targetBoth__ typename Array<T, ND, nElem>::ConstSubType Helper(const Array<T, ND, nElem>& self, const size_t i) {
   Array<T, ND-1, nElem> ans;
   ans.data = self.data + i * self.indexer.strides[0];
   ans.owner = false;
@@ -156,7 +156,7 @@ BOTH typename Array<T, ND, nElem>::ConstSubType Helper(const Array<T, ND, nElem>
 }
 
 template<typename T, size_t nElem>
-BOTH typename Array<T, 1, nElem>::ConstSubType Helper(const Array<T, 1, nElem>& self, const size_t i) {
+__targetBoth__ typename Array<T, 1, nElem>::ConstSubType Helper(const Array<T, 1, nElem>& self, const size_t i) {
   ElemWrapper<const T, nElem> ans;
   ans.data = self.data + i * self.indexer.strides[0];
   // Refactor to allow layout switching
@@ -217,29 +217,29 @@ struct Array
   //     return *this;
   //   }
   // };
-  BOTH size_t nElems() const {
+  __targetBoth__ size_t nElems() const {
     return nElem;
   }
   
-  BOTH size_t nDims() const {
+  __targetBoth__ size_t nDims() const {
     return ND;
   }
-  BOTH const ShapeType& Shape() const {
+  __targetBoth__ const ShapeType& Shape() const {
     return indexer.shape;
   }
-  BOTH const ShapeType& Strides() const {
+  __targetBoth__ const ShapeType& Strides() const {
     return indexer.strides;
   }
-  BOTH size_t Size() const {
+  __targetBoth__ size_t Size() const {
     return indexer.size;
   }
   
   // Default constructor
-  BOTH Array() : indexer(ShapeType()), data(nullptr), owner(false)
+  __targetBoth__ Array() : indexer(ShapeType()), data(nullptr), owner(false)
   {
   }
   // Construct a given shape array
-  BOTH Array(const ShapeType& shape) : indexer(shape), owner(true)
+  __targetBoth__ Array(const ShapeType& shape) : indexer(shape), owner(true)
   {
     size_t total_size = nElem * indexer.size;
     data = new T[total_size];
@@ -281,7 +281,7 @@ struct Array
     return *this;
   }
   
-  BOTH ~Array() {
+  __targetBoth__ ~Array() {
     if (owner) {
       delete[] data;
       data = NULL;
@@ -289,11 +289,11 @@ struct Array
   }
   // Subscript to return an array with dimensionality ND-1 or an
   // ElementWrapper, as appropriate.
-  BOTH SubType operator[](size_t i) {
+  __targetBoth__ SubType operator[](size_t i) {
     return Helper(*this, i);
   }
   
-  BOTH WrapType operator[](const ShapeType& idx) {
+  __targetBoth__ WrapType operator[](const ShapeType& idx) {
     WrapType ans;
     ans.data = data + indexer(idx);
     // Refactor to allow layout switching
@@ -301,11 +301,11 @@ struct Array
     return ans;
   }
   
-  BOTH ConstSubType operator[](size_t i) const {
+  __targetBoth__ ConstSubType operator[](size_t i) const {
     return Helper(*this, i);
   }
   
-  BOTH ConstWrapType operator[](const ShapeType& idx) const {
+  __targetBoth__ ConstWrapType operator[](const ShapeType& idx) const {
     ConstWrapType ans;
     ans.data = data + indexer(idx);
     // Refactor to allow layout switching
@@ -320,7 +320,7 @@ struct Array
   // iterator end() {
   //   return iterator(*this, indexer.shape);
   // }
-  BOTH bool operator !=(const Array& other) {
+  __targetBoth__ bool operator !=(const Array& other) {
     return data != other.data;
   }
 };
