@@ -1,4 +1,3 @@
-#include <curand_kernel.h>
 #include <cmath>
 
 #include "SwimmerArray.h"
@@ -9,8 +8,7 @@ __targetEntry__ void DoInitPrng(const unsigned long long seed,
   auto n = prngs.Shape();
   FOR_TLP(n) {
     FOR_ILP(i) {
-      auto this_prng = prngs[i][0];
-      curand_init(seed, i[0], 0, &this_prng);
+      target::rand::init(seed, i[0], 0, &prngs[i][0]);
     }
   }
 }
@@ -160,13 +158,13 @@ __targetEntry__ void DoSwimmerArrayMove(const CommonParams& common,
       double newn[DQ_d];
       double norm;
   
-      float rand = curand_uniform(&swim_prng[iSwim][0]);
+      float rand = target::rand::uniform(&swim_prng[iSwim][0]);
       if (rand < common.alpha) {
 	// Tumble - i.e. pick a random unit vector
 	// Pick a point from a Gaussian distribution and normalise it
 	// We'll do the norm below.
 	for (int d=0; d<DQ_d; d++) {
-	  newn[d] = curand_normal_double(&swim_prng[iSwim][0]);
+	  newn[d] = target::rand::normal_double(&swim_prng[iSwim][0]);
 	  norm += newn[d]*newn[d];
 	}
 

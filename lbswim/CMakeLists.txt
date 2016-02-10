@@ -2,6 +2,10 @@
 
 set(TARGETDP_SOURCE_DIR ""
   CACHE path "Path to the targetDP source")
+set(TARGET_MODE "CUDA"
+  CACHE string "CUDA, OPENMP or VANILLA")
+
+add_definitions(-DTARGET_MODE=${TARGET_MODE} -DTARGET_MODE_${TARGET_MODE})
 
 add_subdirectory( liblbswim )
 

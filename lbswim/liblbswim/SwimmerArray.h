@@ -8,8 +8,6 @@
 
 #include "Lists.h"
 
-#include <curand_kernel.h>
-
 class Lattice;
 
 struct CommonParams {

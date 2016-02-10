@@ -9,6 +9,7 @@
 #include "SwimmerArray.cxx"
 #include "TracerArray.cxx"
 
+#include "target/rand_cuda.cxx"
 #include "targetDP_CUDA.c"
 
 template class SharedItem<ScalarList>;

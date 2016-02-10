@@ -4,8 +4,9 @@
 
 #include "Array.h"
 #include "dq.h"
-struct curandStateXORWOW;
-typedef struct curandStateXORWOW RandState;
+#include "target/rand.h"
+
+typedef target::rand::State RandState;
 
 typedef Array<double, 1, 1> ScalarList;
 typedef Array<double, 1, 3> VectorList;

@@ -1,7 +1,7 @@
 // Definitions of the templates
 
-#ifndef TARGETPP_HPP
-#define TARGETPP_HPP
+#ifndef TARGET_TARGETPP_HPP
+#define TARGET_TARGETPP_HPP
 
 #include "./target.h"
 

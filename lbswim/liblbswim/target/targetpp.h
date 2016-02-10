@@ -24,23 +24,24 @@ namespace target {
   }
 }
 
-#ifdef __NVCC__
+#if defined(TARGET_MODE_CUDA)
 // CUDA backend
 #include "./cuda_backend.hpp"
 
-#else
+#elif defined(TARGET_MODE_OPENMP)
 
-#ifdef _OPENMP
 // OpenMP C++ backend
 #include "./omp_backend.hpp"
 
-#else
+#elif defined(TARGET_MODE_OPENMP)
 // Vanilla C++ backend
 #include "./vanilla_backend.hpp"
 
-#endif
+#else
+#error "TARGET_MODE not defined!"
 
 #endif
+
 
 #define FOR_TLP2(threadCtx, N) \
   for(auto threadCtx: target::MkContext(N))
