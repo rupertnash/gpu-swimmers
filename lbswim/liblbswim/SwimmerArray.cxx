@@ -2,6 +2,7 @@
 
 #include "SwimmerArray.h"
 #include "interp.h"
+#include "target/atomic.h"
 
 __targetEntry__ void DoInitPrng(const unsigned long long seed,
 			   RandList& prngs) {
@@ -23,20 +24,6 @@ SwimmerArray::SwimmerArray(const size_t num_, const CommonParams* p) :
   prng.D2H();
 }
 
-__target__ double atomicAdd(double* address, double val) {
-  unsigned long long int* address_as_ull = (unsigned long long int*)address;
-  unsigned long long int old = *address_as_ull, assumed;
-  do {
-    assumed = old;
-    old = atomicCAS(address_as_ull,
-		    assumed,
-		    __double_as_longlong(val + __longlong_as_double(assumed)));
-    /* Note: uses integer comparison to avoid hang in case of NaN
-     * (since NaN != NaN) */
-  } while (assumed != old);
-  
-  return __longlong_as_double(old);
-}
 
 __target__ void AccumulateDeltaForce(VectorField& lat_force, const double* r, const double* F) {
   size_t indices[DQ_d][4];
@@ -66,7 +53,7 @@ __target__ void AccumulateDeltaForce(VectorField& lat_force, const double* r, co
 			  deltas[DQ_Z][k]);
 	/* add force contributions */
 	for (d=0; d<DQ_d; ++d) {
-	  atomicAdd(&point_force[d], delta3d * F[d]);
+	  target::atomic::increment(point_force[d], delta3d * F[d]);
 	}
 	
       }/* k */
