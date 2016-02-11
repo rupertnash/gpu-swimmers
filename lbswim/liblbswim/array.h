@@ -1,7 +1,7 @@
 // -*- mode: C++; -*-
 #ifndef array_H
 #define array_H
-
+#include <cstdlib>
 #include "target/func_attr.h"
 
 /* Minimal CUDA-compatible std::array replacement */

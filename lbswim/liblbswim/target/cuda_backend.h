@@ -110,6 +110,6 @@ namespace target {
   // the right type of launcher
   template<class FuncT, class ShapeT>
   CudaLauncher<ShapeT::size(), typename function_traits<FuncT>::args_type>
-  MkLauncher(FuncT* f, ShapeT shape);
+  launch(FuncT* f, ShapeT shape);
 }
 #endif

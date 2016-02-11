@@ -2,6 +2,7 @@
 
 #include "SwimmerArray.h"
 #include "interp.h"
+#include "target/targetpp.h"
 #include "target/atomic.h"
 
 __targetEntry__ void DoInitPrng(const unsigned long long seed,
@@ -9,7 +10,7 @@ __targetEntry__ void DoInitPrng(const unsigned long long seed,
   auto n = prngs.Shape();
   FOR_TLP(n) {
     FOR_ILP(i) {
-      target::rand::init(seed, i[0], 0, &prngs[i][0]);
+      target::rand::init(seed, i[0], &prngs[i][0]);
     }
   }
 }
@@ -63,7 +64,7 @@ __target__ void AccumulateDeltaForce(VectorField& lat_force, const double* r, co
 }
 
 
-__global__ void DoSwimmerArrayAddForces(const CommonParams& p,
+__targetEntry__ void DoSwimmerArrayAddForces(const CommonParams& p,
 					const VectorList& swim_r,
 					const VectorList& swim_n,
 					VectorField& lat_force) {

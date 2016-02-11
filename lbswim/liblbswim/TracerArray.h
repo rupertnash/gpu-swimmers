@@ -3,6 +3,7 @@
 #define TRACER_ARRAY_H
 
 #include "Lists.h"
+#include "SharedArray.h"
 
 class Lattice;
 

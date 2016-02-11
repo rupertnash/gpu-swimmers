@@ -23,7 +23,7 @@
 
 namespace target {
   namespace rand {
-    __target__ void init(unsigned long long seed, unsigned long long sequence, unsigned long long offset, State* state);
+    __target__ void init(unsigned long long seed, unsigned long long sequence, State* state);
     __target__ float uniform(State *state);
     __target__ double normal_double(State* state);
   }

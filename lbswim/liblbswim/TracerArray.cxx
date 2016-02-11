@@ -1,6 +1,7 @@
 #include "TracerArray.h"
 #include <cmath>
 #include "interp.h"
+#include "target/targetpp.h"
 
 TracerArray::TracerArray(const size_t num_) : 
   num(num_),

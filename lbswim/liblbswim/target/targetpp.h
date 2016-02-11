@@ -4,6 +4,7 @@
 
 #include "./func_attr.h"
 #include "../array.h"
+#include "target.h"
 
 // Backend-independent things
 namespace target {
@@ -18,7 +19,7 @@ namespace target {
   void copyIn(T* targetData, const T* data, const size_t n = 1);
   template<typename T>
   void copyOut(T* data, const T* targetData, const size_t n = 1);
-
+  
   inline void synchronize() {
     targetSynchronize();
   }
@@ -33,7 +34,7 @@ namespace target {
 // OpenMP C++ backend
 #include "./omp_backend.hpp"
 
-#elif defined(TARGET_MODE_OPENMP)
+#elif defined(TARGET_MODE_VANILLA)
 // Vanilla C++ backend
 #include "./vanilla_backend.hpp"
 

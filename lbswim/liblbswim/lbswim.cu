@@ -10,16 +10,6 @@
 #include "TracerArray.cxx"
 
 #include "target/rand_cuda.cxx"
-#include "targetDP_CUDA.c"
+#include <targetDP_CUDA.c>
 
-template class SharedItem<ScalarList>;
-template class SharedItem<VectorList>;
-
-template class SharedItem<ScalarField>;
-template class SharedItem<VectorField>;
-template class SharedItem<DistField>;
-
-template class SharedItem<RandList>;
-
-template class SharedItem<CommonParams>;
-template class SharedItem<LBParams>;
+#include "python_template_instantiations.cxx"

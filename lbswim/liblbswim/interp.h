@@ -7,9 +7,8 @@
 #include "Lattice.h"
 #include "array.h"
 
-
 template<typename Float>
-__device__ Float peskin_delta(Float x) {
+__target__ Float peskin_delta(Float x) {
   Float abs_x = std::fabs(x);
   Float root = -4. * x*x;
   Float phi = -2.* abs_x;
@@ -30,7 +29,7 @@ __device__ Float peskin_delta(Float x) {
 }
 
 template<typename Indexable>
-__device__ array<double,DQ_d> InterpVelocity(const VectorField& lat_u,
+__target__ array<double,DQ_d> InterpVelocity(const VectorField& lat_u,
 			       const Indexable& r) {
   auto n = lat_u.indexer.shape;
   int indices[DQ_d][4];
