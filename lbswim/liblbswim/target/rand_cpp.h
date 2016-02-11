@@ -1,6 +1,6 @@
 // -*- mode: C++; -*-
-#ifndef TARGET_RAND_VANILLA_H
-#define TARGET_RAND_VANNILA_H
+#ifndef TARGET_RAND_CPP_H
+#define TARGET_RAND_CPP_H
 
 #include <random>
 

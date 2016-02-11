@@ -6,13 +6,9 @@
 // CUDA 
 #include "./rand_cuda.h"
 
-#elif defined(TARGET_MODE_OPENMP)
-// OpenMP C++
-#include "./rand_omp.h"
-
-#elif defined(TARGET_MODE_VANILLA)
-// Vanilla C++
-#include "./rand_vanilla.h"
+#elif defined(TARGET_MODE_OPENMP) || defined(TARGET_MODE_VANILLA)
+// OpenMP or plain C++ can use the same implementation
+#include "./rand_cpp.h"
 
 #else
 #error "TARGET_MODE not defined!"

@@ -14,7 +14,7 @@ elseif(TARGET_MODE STREQUAL "OPENMP")
 elseif(TARGET_MODE STREQUAL "VANILLA")
   add_library(lbswim SHARED
     Lattice.cxx  SwimmerArray.cxx TracerArray.cxx python_template_instantiations.cxx
-    target/rand_vanilla.cxx ${TARGETDP_SOURCE_DIR}/targetDP_C.c
+    target/rand_cpp.cxx ${TARGETDP_SOURCE_DIR}/targetDP_C.c
     )
 else()
   message(FATAL_ERROR "Unknown TARGET_MODE = '${TARGET_MODE}'")
