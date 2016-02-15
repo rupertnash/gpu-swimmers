@@ -5,6 +5,7 @@
 #include "./func_attr.h"
 #include "../array.h"
 #include "target.h"
+#include <utility>
 
 // Backend-independent things
 namespace target {
@@ -23,6 +24,7 @@ namespace target {
   inline void synchronize() {
     targetSynchronize();
   }
+
 }
 
 #if defined(TARGET_MODE_CUDA)
@@ -56,5 +58,18 @@ namespace target {
 
 
 #include "./targetpp.hpp"
+
+#define TARGET_KERNEL_DECLARE(name, nd, vl, ...)			\
+  struct name : public ::target::Kernel<name>::Dims<nd>::VecLen<vl>::ArgTypes<__VA_ARGS__> { \
+    using ::target::Kernel<name>::Dims<nd>::VecLen<vl>::ArgTypes<__VA_ARGS__>::ArgTypes; \
+    __target__ void Run(__VA_ARGS__);					\
+  }
+#define TARGET_KERNEL_DEFINE(name, ...)		\
+  __target__ void name::Run(__VA_ARGS__)
+
+#define KERNEL_TLP(threadSpace)						\
+  for (auto threadSpace = indexSpace->begin(); threadSpace != indexSpace->end(); ++threadSpace)
+#define KERNEL_ILP(index, threadSpace)		\
+  for (size_t index = 0; index < vecLen; ++index)
 
 #endif

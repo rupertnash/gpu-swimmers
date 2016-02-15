@@ -51,7 +51,7 @@ namespace target {
     return *this;
   }
   
-  template<size_t ND, size_t VL>  
+  template<size_t ND, size_t VL>
   __target__ bool CudaThreadContext<ND, VL>::operator!=(const CudaThreadContext& other) const {
     if (&ctx != &other.ctx)
       return true;  
@@ -60,6 +60,13 @@ namespace target {
     return false;
   }
   
+  template<size_t ND, size_t VL>
+  __target__ auto CudaThreadContext<ND, VL>::operator[](size_t ilp_idx) const -> Shape {
+    Shape ans = idx;
+    ans[ND-1] += ilp_idx;
+    return ans;
+  }
+
   template<size_t ND, size_t VL>
   __target__ const CudaThreadContext<ND, VL>& CudaThreadContext<ND, VL>::operator*() const {
     return *this;
@@ -165,6 +172,57 @@ namespace target {
   CudaLauncher<ShapeT::size(), typename function_traits<FuncT>::args_type>
   launch(FuncT* f, ShapeT shape) {
     return CudaLauncher<ShapeT::size(), typename function_traits<FuncT>::args_type>(shape, f);
+  }
+
+
+  template<class Impl>
+  template<size_t ND>
+  template<size_t VL>
+  template<class... Args>
+  __targetBoth__ Kernel<Impl>::Dims<ND>::VecLen<VL>::ArgTypes<Args...>::ArgTypes(const Index& shape) {
+    static_assert(ND > 0, "Must have at least one dimension");
+    static_assert(ND <= 3, "CUDA doesn't deal with more than 3D");
+    
+    const size_t bs_x = ND == 1 ? 128 : (ND == 2 ?  8 : 4);
+    const size_t bs_y = ND == 1 ?   1 : (ND == 2 ? 16 : 4);
+    const size_t bs_z = ND == 1 ?   1 : (ND == 2 ?  1 : 8);
+    const size_t total_threads =  bs_x * bs_y * bs_z;
+    static_assert(total_threads == DEFAULT_TPB, "block shape doesn't match DEFAULT_TPB");
+
+    extent = shape;
+    blockShape = {bs_x, bs_y, bs_z};
+
+    switch (ND) {
+    case 1:
+       nBlocks.x = ((shape[0] / VL) + blockShape.x - 1) / blockShape.x;
+      break;
+    case 2:
+      nBlocks.x = (shape[0] + blockShape.x - 1)/ blockShape.x;
+      nBlocks.y = ((shape[1] / VL) + blockShape.y - 1) / blockShape.y;
+      break;
+    case 3:
+      nBlocks.x = (shape[0] + blockShape.x - 1)/blockShape.x;
+      nBlocks.y = (shape[1] + blockShape.y - 1)/blockShape.y;
+      nBlocks.z = ((shape[2] / VL) + blockShape.z - 1)/blockShape.z;
+      break;
+    default:
+      break;
+    }
+  }
+  template<class Impl, size_t ND, size_t VL, class... Args>
+  __targetEntry__ void TargetKernelEntry(const array<size_t, ND> shape, Args... args) {
+    Impl kernel(shape);
+    kernel.indexSpace = new CudaContext<ND,VL>(shape);
+    kernel.Run(args...);
+    delete kernel.indexSpace;
+  }
+  
+  template<class Impl>
+  template<size_t ND>
+  template<size_t VL>
+  template<class... Args>
+  void Kernel<Impl>::Dims<ND>::VecLen<VL>::ArgTypes<Args...>::Launch(Args&&... args) {
+    TargetKernelEntry<Impl, ND, VL, Args...> <<<nBlocks, blockShape>>> (extent, std::forward<Args>(args)...);
   }
 
 }
