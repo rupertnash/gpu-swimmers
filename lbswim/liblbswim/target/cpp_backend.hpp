@@ -1,7 +1,7 @@
-#ifndef TARGET_VANILLA_BACKEND_HPP
-#define TARGET_VANILLA_BACKEND_HPP
+#ifndef TARGET_CPP_BACKEND_HPP
+#define TARGET_CPP_BACKEND_HPP
 
-#include "./vanilla_backend.h"
+#include "./cpp_backend.h"
 
 namespace target {
     

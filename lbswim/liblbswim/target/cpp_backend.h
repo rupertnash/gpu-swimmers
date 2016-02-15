@@ -1,6 +1,6 @@
 // -*- mode: C++; -*-
-#ifndef TARGET_VANILLA_BACKEND_H
-#define TARGET_VANILLA_BACKEND_H
+#ifndef TARGET_CPP_BACKEND_H
+#define TARGET_CPP_BACKEND_H
 
 #include "./func_attr.h"
 #include "../array.h"

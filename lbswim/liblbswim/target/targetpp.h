@@ -34,11 +34,11 @@ namespace target {
 #elif defined(TARGET_MODE_OPENMP)
 
 // OpenMP C++ backend
-#include "./omp_backend.hpp"
+#include "./cpp_backend.hpp"
 
 #elif defined(TARGET_MODE_VANILLA)
 // Vanilla C++ backend
-#include "./vanilla_backend.hpp"
+#include "./cpp_backend.hpp"
 
 #else
 #error "TARGET_MODE not defined!"
