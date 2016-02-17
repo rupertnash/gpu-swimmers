@@ -9,7 +9,13 @@ if(TARGET_MODE STREQUAL "CUDA")
   
   cuda_add_library(lbswim SHARED lbswim.cu)
 elseif(TARGET_MODE STREQUAL "OPENMP")
-  message(FATAL_ERROR "TARGET_MODE = OPENMP not implemented")
+  find_package(OpenMP REQUIRED)
+  add_compile_options(${OpenMP_CXX_FLAGS})
+  
+  add_library(lbswim SHARED
+    Lattice.cxx  SwimmerArray.cxx TracerArray.cxx python_template_instantiations.cxx
+    target/rand_cpp.cxx ${TARGETDP_SOURCE_DIR}/targetDP_C.c
+    )
 
 elseif(TARGET_MODE STREQUAL "VANILLA")
   add_library(lbswim SHARED
