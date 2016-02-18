@@ -28,7 +28,7 @@ foreach(basename Array Fields Lists lb swimmers tracers)
     DESTINATION ${_INST_DIR})
 endforeach(basename)
 
-foreach(py_mod __init__ System)
+foreach(py_mod __init__ System Controller randomUnitVector Timer cd)
   install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/${py_mod}.py
     DESTINATION ${_INST_DIR})
 endforeach()
