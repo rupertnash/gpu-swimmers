@@ -1,5 +1,5 @@
 #include "SharedItem.hpp"
-#include "SharedArray.hpp"
+#include "SharedNdArray.hpp"
 #include "Lists.h"
 #include "Fields.h"
 #include "SwimmerArray.h"

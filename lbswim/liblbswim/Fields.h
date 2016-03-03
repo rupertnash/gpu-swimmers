@@ -2,11 +2,11 @@
 #ifndef FIELDS_H
 #define FIELDS_H
 
-#include "Array.h"
+#include "NdArray.h"
 #include "dq.h"
 
-typedef Array<double, DQ_d, 1> ScalarField;
-typedef Array<double, DQ_d, DQ_d> VectorField;
-typedef Array<double, DQ_d, DQ_q> DistField;
+typedef NdArray<double, DQ_d, 1> ScalarField;
+typedef NdArray<double, DQ_d, DQ_d> VectorField;
+typedef NdArray<double, DQ_d, DQ_q> DistField;
 
 #endif

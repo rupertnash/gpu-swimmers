@@ -4,9 +4,9 @@ cimport Array
 cimport _shared
 cimport numpy as np
 
-ctypedef _array.Array[double, DQ_d, ONE] _ScalarField
-ctypedef _array.Array[double, DQ_d, DQ_d] _VectorField
-ctypedef _array.Array[double, DQ_d, DQ_q] _DistField
+ctypedef _array.NdArray[double, DQ_d, ONE] _ScalarField
+ctypedef _array.NdArray[double, DQ_d, DQ_d] _VectorField
+ctypedef _array.NdArray[double, DQ_d, DQ_q] _DistField
 
 cdef class ScalarField(Array.Array):
     cdef _array.ArrayHelper[_ScalarField]* impl

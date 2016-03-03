@@ -5,13 +5,13 @@ cdef extern from "array.h":
     cdef cppclass array[T, N]:
         pass
 
-cdef extern from "Array.h":
+cdef extern from "NdArray.h":
     cdef cppclass SpaceIndexer[NDIM]:
         array[size_t, NDIM] shape
         array[size_t, NDIM] strides
         size_t size
   
-    cdef cppclass Array[T, NDIM, NELEM]:
+    cdef cppclass NdArray[T, NDIM, NELEM]:
         SpaceIndexer[NDIM] indexer
         T* data
         T* baseData

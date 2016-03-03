@@ -2,9 +2,9 @@
 #ifndef SWIMMER_ARRAY_H
 #define SWIMMER_ARRAY_H
 
-#include "Array.h"
+#include "NdArray.h"
 #include "SharedItem.h"
-#include "SharedArray.h"
+#include "SharedNdArray.h"
 
 #include "Lists.h"
 

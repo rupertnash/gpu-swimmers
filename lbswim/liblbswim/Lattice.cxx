@@ -36,8 +36,8 @@ LDView LatticeData::Device(){
   return v;
 }
 
-//template void SharedArray<double>::H2D();
-//template class SharedArray<double>;
+//template void SharedNdArray<double>::H2D();
+//template class SharedNdArray<double>;
 Lattice::Lattice(const Shape& shape_, double tau_s, double tau_b) : shape(shape_), data(shape_), time_step(0) {
   // Set up params and move to device
   params.Host().tau_s = tau_s;

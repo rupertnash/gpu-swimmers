@@ -1,13 +1,13 @@
 // -*- mode: C++; -*-
-#ifndef SHAREDARRAY_HPP
-#define SHAREDARRAY_HPP
+#ifndef SHAREDNDARRAY_HPP
+#define SHAREDNDARRAY_HPP
 
-#include "SharedArray.h"
+#include "SharedNdArray.h"
 
 #include "target/targetpp.h"
 
 template<typename T, size_t ND, size_t nElem>
-void SharedItem< Array<T, ND, nElem> >::Reset() {
+void SharedItem< NdArray<T, ND, nElem> >::Reset() {
   host = new SharedType();
   target::malloc(device);
   target::copyIn(device,
@@ -17,7 +17,7 @@ void SharedItem< Array<T, ND, nElem> >::Reset() {
 }
 
 template<typename T, size_t ND, size_t nElem>
-void SharedItem< Array<T, ND, nElem> >::Steal(const SharedItem& other) {
+void SharedItem< NdArray<T, ND, nElem> >::Steal(const SharedItem& other) {
   host = other.host;
   device = other.device;
   device_data = other.device_data;
@@ -25,7 +25,7 @@ void SharedItem< Array<T, ND, nElem> >::Steal(const SharedItem& other) {
 }
 
 template<typename T, size_t ND, size_t nElem>
-void SharedItem< Array<T, ND, nElem> >::Free() {
+void SharedItem< NdArray<T, ND, nElem> >::Free() {
   target::free(device_data);
   target::free(device);
   delete host;
@@ -33,12 +33,12 @@ void SharedItem< Array<T, ND, nElem> >::Free() {
 }
 
 template<typename T, size_t ND, size_t nElem>
-SharedItem< Array<T, ND, nElem> >::SharedItem() {
+SharedItem< NdArray<T, ND, nElem> >::SharedItem() {
   Reset();
 }
 
 template<typename T, size_t ND, size_t nElem>
-SharedItem< Array<T, ND, nElem> >::SharedItem(const ShapeType& shape) {
+SharedItem< NdArray<T, ND, nElem> >::SharedItem(const ShapeType& shape) {
   host = new SharedType(shape);
   target::malloc(device);
 
@@ -56,7 +56,7 @@ SharedItem< Array<T, ND, nElem> >::SharedItem(const ShapeType& shape) {
 
 // Move constructor
 template<typename T, size_t ND, size_t nElem>
-SharedItem< Array<T, ND, nElem> >::SharedItem(SharedItem&& other) {
+SharedItem< NdArray<T, ND, nElem> >::SharedItem(SharedItem&& other) {
   // Steal other's resources
   Steal(other);
   // Reset other's members
@@ -65,7 +65,7 @@ SharedItem< Array<T, ND, nElem> >::SharedItem(SharedItem&& other) {
 
 // Move assign
 template<typename T, size_t ND, size_t nElem>
-SharedItem< Array<T, ND, nElem > >& SharedItem< Array<T, ND, nElem> >::operator=(SharedItem&& other) {
+SharedItem< NdArray<T, ND, nElem > >& SharedItem< NdArray<T, ND, nElem> >::operator=(SharedItem&& other) {
   // Free my resources
   Free();
   // Steal other's resources
@@ -76,41 +76,41 @@ SharedItem< Array<T, ND, nElem > >& SharedItem< Array<T, ND, nElem> >::operator=
 }
 
 template<typename T, size_t ND, size_t nElem>
-SharedItem< Array<T, ND, nElem> >::~SharedItem() {
+SharedItem< NdArray<T, ND, nElem> >::~SharedItem() {
   Free();
 }
 
 template<typename T, size_t ND, size_t nElem>
-Array<T, ND, nElem>& SharedItem< Array<T, ND, nElem> >::Host() {
+NdArray<T, ND, nElem>& SharedItem< NdArray<T, ND, nElem> >::Host() {
   return *host;
 }
 
 template<typename T, size_t ND, size_t nElem>
-Array<T, ND, nElem>& SharedItem< Array<T, ND, nElem> >::Device() {
+NdArray<T, ND, nElem>& SharedItem< NdArray<T, ND, nElem> >::Device() {
   return *device;
 }
  
 template<typename T, size_t ND, size_t nElem>
-const Array<T, ND, nElem>& SharedItem< Array<T, ND, nElem> >::Host() const {
+const NdArray<T, ND, nElem>& SharedItem< NdArray<T, ND, nElem> >::Host() const {
   return *host;
 }
 template<typename T, size_t ND, size_t nElem>
-const Array<T, ND, nElem>& SharedItem< Array<T, ND, nElem> >::Device() const {
+const NdArray<T, ND, nElem>& SharedItem< NdArray<T, ND, nElem> >::Device() const {
   return *device;
 }
 
 template<typename T, size_t ND, size_t nElem>
-void SharedItem< Array<T, ND, nElem> >::H2D() {
+void SharedItem< NdArray<T, ND, nElem> >::H2D() {
   target::copyIn(device_data,
 		 host->data,
 		 dataSize);
 }
 
 template<typename T, size_t ND, size_t nElem>
-void SharedItem< Array<T, ND, nElem> >::D2H() {
+void SharedItem< NdArray<T, ND, nElem> >::D2H() {
   target::copyOut(host->data,
 		  device_data,
 		  dataSize);
 }
 
-#endif // SHAREDARRAY_HPP
+#endif // SHAREDNDARRAY_HPP

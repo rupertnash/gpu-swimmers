@@ -7,7 +7,7 @@ from Lists cimport _VectorList
 cdef extern from "SwimmerArray.h":
     cdef cppclass RandState:
         pass
-    ctypedef _array.Array[RandState, ONE, ONE] _RandList
+    ctypedef _array.NdArray[RandState, ONE, ONE] _RandList
     
     cdef cppclass CommonParams:
         double P

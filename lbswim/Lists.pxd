@@ -4,8 +4,8 @@ cimport Array
 cimport _shared
 cimport numpy as np
 
-ctypedef _array.Array[double, ONE, ONE] _ScalarList
-ctypedef _array.Array[double, ONE, DQ_d] _VectorList
+ctypedef _array.NdArray[double, ONE, ONE] _ScalarList
+ctypedef _array.NdArray[double, ONE, DQ_d] _VectorList
 
 cdef class ScalarList(Array.Array):
     cdef _array.ArrayHelper[_ScalarList]* impl

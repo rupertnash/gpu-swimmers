@@ -5,9 +5,9 @@
 #include "dq.h"
 #include "LBParams.h"
 
-#include "Array.h"
+#include "NdArray.h"
 #include "SharedItem.h"
-#include "SharedArray.h"
+#include "SharedNdArray.h"
 
 #include "Fields.h"
 
