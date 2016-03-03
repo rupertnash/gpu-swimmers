@@ -29,7 +29,7 @@ namespace target {
     return CppThreadContext<ND, VL>(*this, extent_VL);
   }
 
-  template<size_t ND = 1, size_t VL = VVL>
+  template<size_t ND, size_t VL>
   bool operator==(const CppContext<ND, VL>& a, const CppContext<ND, VL>& b) {
     return (a.start == b.start) && (a.extent == b.extent);
   }
@@ -50,28 +50,28 @@ namespace target {
   }
 
   
-  template<size_t ND = 1, size_t VL = VVL>
+  template<size_t ND, size_t VL>
   bool operator==(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b) {
     return (a.ctx == b.ctx) && (a.ijk == b.ijk);
   }
-  template<size_t ND = 1, size_t VL = VVL>
+  template<size_t ND, size_t VL>
   bool operator!=(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b) {
     return !(a == b);
   }
   
-  template<size_t ND = 1, size_t VL = VVL>
+  template<size_t ND, size_t VL>
   bool operator<(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b) {
     return a.ijk < b.ijk;
   }
-  template<size_t ND = 1, size_t VL = VVL>
+  template<size_t ND, size_t VL>
   bool operator<=(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b) {
     return a.ijk <= b.ijk;
   }
-  template<size_t ND = 1, size_t VL = VVL>
+  template<size_t ND, size_t VL>
   bool operator>(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b) {
     return a.ijk > b.ijk;
   }
-  template<size_t ND = 1, size_t VL = VVL>
+  template<size_t ND, size_t VL>
   bool operator>=(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b) {
     return a.ijk >= b.ijk;
   }
@@ -126,7 +126,7 @@ namespace target {
 
   // Kernel Launcher - knows the types it will be called with.
   template <size_t ND, class... FuncArgs>
-  CppLauncher<ND, FuncArgs...>::CppLauncher(const ShapeT& s, const FuncT f) : shape(s), func(f) {
+  CppLauncher<ND, FuncArgs...>::CppLauncher(const ShapeT& s, const FuncT& f) : shape(s), func(f) {
     static_assert(ND > 0, "Must have at least one dimension");
   }
   

@@ -134,7 +134,7 @@ namespace target {
     const FuncT& func;
   
     // Prepare to launch
-    CppLauncher(const ShapeT& s, const FuncT f);
+    CppLauncher(const ShapeT& s, const FuncT& f);
     // Launch!
     void operator()(FuncArgs... args);
   };
