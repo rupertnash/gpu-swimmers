@@ -3,7 +3,7 @@
 #define TARGET_CPP_BACKEND_H
 
 #include "./func_attr.h"
-#include "../array.h"
+#include "../Array.h"
 #include "./function_traits.h"
 
 namespace target {
@@ -31,56 +31,95 @@ namespace target {
     // Describe the index space the global iteration is over
     const Shape start;
     const Shape extent;
+    const SpaceIndexer<ND> indexer;
   };
-
-  // Target-only class that controls thread-level iteration over the
-  // index space
   template<size_t ND = 1, size_t VL = VVL>
-  struct CppThreadContext {
+  bool operator==(const CppContext<ND, VL>& a, const CppContext<ND, VL>& b);
   
-    typedef CppContext<ND, VL> Parent;
-    typedef typename Parent::Shape Shape;
+  // Target-only class that controls thread-level iteration over the
+  // index space.
+  
+  // OpenMP requires that it be a random access iterator.
+  template<size_t ND = 1, size_t VL = VVL>
+  struct CppThreadContext /*: public std::iterator<std::random_access_iterator_tag,
+						 const array<size_t, ND>,
+						 int>*/
+  {
+  
+    typedef CppContext<ND, VL> Context;
+    typedef typename Context::Shape Shape;
   
     // Constructor
-    __target__ CppThreadContext(const Parent& ctx_, const Shape& pos);
-  
-    // Iterator protocol - note it returns itself on derefence!
-    __target__ CppThreadContext& operator++();
-    __target__ bool operator!=(const CppThreadContext& other) const;
-    __target__ const CppThreadContext& operator*() const;
+    __target__ CppThreadContext() = default;
+    __target__ CppThreadContext(const Context& ctx_, const Shape& pos);
+    __target__ CppThreadContext(const CppThreadContext& other) = default;
+    __target__ CppThreadContext(CppThreadContext&& other) = default;
 
-    __target__ Shape operator[](size_t ilp_idx) const;
+    // Destructor
+    __target__ ~CppThreadContext() = default;
+    
+    // Assign
+    __target__ CppThreadContext& operator=(const CppThreadContext& other) = default;
+    __target__ CppThreadContext& operator=(CppThreadContext&& other) = default;
+    
+    // Deref
+    __target__ size_t operator*() const;
+    // Increment/decrement
+    __target__ CppThreadContext& operator++();
+    __target__ CppThreadContext& operator--();
+    __target__ CppThreadContext& operator+=(std::ptrdiff_t);
+    __target__ CppThreadContext& operator-=(std::ptrdiff_t);
+
+    __target__ size_t operator[](std::ptrdiff_t) const;
     
     // Container protocol
     __target__ CppSimdContext<ND, VL> begin() const;
     __target__ CppSimdContext<ND, VL> end() const;
   
     // Global iteration space
-    const Parent& ctx;
+    const Context& ctx;
     // Current position of this thread in its iteration
-    Shape idx;
+    size_t ijk;
   };
+  
+  template<size_t ND = 1, size_t VL = VVL>
+  bool operator==(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b);
+  template<size_t ND = 1, size_t VL = VVL>
+  bool operator!=(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b);
+  template<size_t ND = 1, size_t VL = VVL>
+  bool operator<(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b);
+  template<size_t ND = 1, size_t VL = VVL>
+  bool operator<=(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b);
+  template<size_t ND = 1, size_t VL = VVL>
+  bool operator>(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b);
+  template<size_t ND = 1, size_t VL = VVL>
+  bool operator>=(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b);
+
+  template<size_t ND = 1, size_t VL = VVL>
+  std::ptrdiff_t operator-(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b);
   
   // Target-only class for instruction-level iteration over the space
   template<size_t ND = 1, size_t VL = VVL>
   struct CppSimdContext {
   
-    typedef CppThreadContext<ND, VL> Parent;
-    typedef typename Parent::Shape Shape;
+    typedef CppContext<ND, VL> Context;
+    typedef typename Context::Shape Shape;
   
     // Constructor
-    __target__ CppSimdContext(const Parent& ctx_, const size_t& pos);
+    __target__ CppSimdContext(const Context& ctx_, const size_t& pos);
   
     // Iterator protocol - derefernces to the current index
     __target__ CppSimdContext& operator++();
-    __target__ bool operator!=(const CppSimdContext& other) const;
     __target__ Shape operator*() const;
   
     // Thread's iteration space
-    const CppThreadContext<ND, VL>& ctx;
+    const Context& ctx;
     // Current position
     size_t idx;
   };
+  
+  // __target__ bool operator!=(const CppSimdContext& a, const CppSimdContext& b);
+  // __target__ bool operator==(const CppSimdContext& a, const CppSimdContext& b);
 
   // Kernel Launcher - it knows the types it will be called with, but
   // you don't have to, as long as you use the factory function below

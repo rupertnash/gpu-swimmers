@@ -6,7 +6,7 @@
 namespace target {
     
   template<size_t ND, size_t VL>
-  __target__ CppContext<ND,VL>::CppContext(const Shape& n) : start(), extent(n) {
+  __target__ CppContext<ND,VL>::CppContext(const Shape& n) : start(), extent(n), indexer(n) {
     static_assert(ND > 0, "Must have at least one dimension");
   }
 
@@ -21,90 +21,79 @@ namespace target {
   }
   template<size_t ND, size_t VL>
   __target__ CppThreadContext<ND, VL> CppContext<ND,VL>::end() const {
-    return CppThreadContext<ND, VL>(*this, extent);
+    auto n = indexer.nToOne(extent);
+    auto n_VL = VL * ((n-1)/ VL + 1);
+    auto dn = n_VL - n;
+    auto extent_VL = extent;
+    extent_VL[ND-1] += dn;
+    return CppThreadContext<ND, VL>(*this, extent_VL);
+  }
+
+  template<size_t ND = 1, size_t VL = VVL>
+  bool operator==(const CppContext<ND, VL>& a, const CppContext<ND, VL>& b) {
+    return (a.start == b.start) && (a.extent == b.extent);
   }
 
   // Now CppThreadContext
   template<size_t ND, size_t VL>
-  __target__ CppThreadContext<ND, VL>::CppThreadContext(const Parent& ctx_, const Shape& pos) : ctx(ctx_), idx(pos) {
+  __target__ CppThreadContext<ND, VL>::CppThreadContext(const Context& ctx_, const Shape& pos) : ctx(ctx_) {
+    auto n = ctx_.indexer.nToOne(pos);
+    // Must start at a point that matches the vector length.
+    assert((n % VL) == 0);
   }
   
-  template<size_t ND, size_t VL, size_t iDim>
-  struct inc {
-    static bool helper(array<size_t, ND>& i, const array<size_t,ND>& n) {
-      if (iDim == (ND-1))
-	i[iDim] += VL;//std::min(i[iDim] + VL, n[iDim]);
-      else
-	i[iDim]++;
-      
-      if (i[iDim] == n[iDim]) {
-	if (iDim == 0)
-	  return true;
-	// roll over next index
-	bool done = inc<ND, VL, iDim - 1>::helper(i, n);
-	
-	if (done) return true;
-	
-	i[iDim] = 0;
-      }
-      return false;
-    }
-  };
-  template<size_t ND, size_t VL>
-  struct inc<ND, VL, 0> {
-    static bool helper(array<size_t, ND>& i, const array<size_t,ND>& n) {
-      if (ND == 1)
-	i[0] += VL; //std::min(i[0] + VL, n[0]);
-      else
-	i[0]++;
-      
-      if (i[0] == n[0]) {
-	return true;
-      }
-      return false;
-    }
-  };
 
   template<size_t ND, size_t VL>
   __target__ CppThreadContext<ND, VL>& CppThreadContext<ND, VL>::operator++() {
-    inc<ND, VL, ND-1>::helper(idx, ctx.extent);
+    ijk += VL;
     return *this;
   }
+
   
-  template<size_t ND, size_t VL>  
-  __target__ bool CppThreadContext<ND, VL>::operator!=(const CppThreadContext& other) const {
-    if (&ctx != &other.ctx)
-      return true;  
-    if (idx != other.idx)
-      return true;
-    return false;
+  template<size_t ND = 1, size_t VL = VVL>
+  bool operator==(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b) {
+    return (a.ctx == b.ctx) && (a.ijk == b.ijk);
+  }
+  template<size_t ND = 1, size_t VL = VVL>
+  bool operator!=(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b) {
+    return !(a == b);
   }
   
-  template<size_t ND, size_t VL>
-  __target__ const CppThreadContext<ND, VL>& CppThreadContext<ND, VL>::operator*() const {
-    return *this;
+  template<size_t ND = 1, size_t VL = VVL>
+  bool operator<(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b) {
+    return a.ijk < b.ijk;
+  }
+  template<size_t ND = 1, size_t VL = VVL>
+  bool operator<=(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b) {
+    return a.ijk <= b.ijk;
+  }
+  template<size_t ND = 1, size_t VL = VVL>
+  bool operator>(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b) {
+    return a.ijk > b.ijk;
+  }
+  template<size_t ND = 1, size_t VL = VVL>
+  bool operator>=(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b) {
+    return a.ijk >= b.ijk;
   }
   
-  template<size_t ND, size_t VL>
-  __target__ auto CppThreadContext<ND, VL>::operator[](size_t ilp_idx) const -> Shape {
-    Shape ans = idx;
-    ans[ND-1] += ilp_idx;
-    return ans;
-  }
+  // template<size_t ND, size_t VL>
+  // __target__ size_t CppThreadContext<ND, VL>::operator*() const {
+  //   return ijk;
+  // }
   
   template<size_t ND, size_t VL>
   __target__ CppSimdContext<ND, VL> CppThreadContext<ND, VL>::begin() const {
-    return CppSimdContext<ND, VL>(*this, 0);
+    return CppSimdContext<ND, VL>(ctx, ijk);
   }
   
   template<size_t ND, size_t VL>
   __target__ CppSimdContext<ND, VL> CppThreadContext<ND, VL>::end() const {
-    return CppSimdContext<ND, VL>(*this, VL);
+    return CppSimdContext<ND, VL>(ctx, ijk + VL);
   }
 
   // CppSimdContext
   template<size_t ND, size_t VL>
-  __target__ CppSimdContext<ND, VL>::CppSimdContext(const Parent& ctx_, const size_t& pos)
+  __target__ CppSimdContext<ND, VL>::CppSimdContext(const Context& ctx_, const size_t& pos)
     : ctx(ctx_), idx(pos) {
   }
   
@@ -115,19 +104,17 @@ namespace target {
   }
 
   template<size_t ND, size_t VL>
-  __target__ bool CppSimdContext<ND, VL>::operator!=(const CppSimdContext& other) const {
-    if (&ctx != &other.ctx)
-      return true;
-    if (idx != other.idx)
-      return true;
-    return false;
+  __target__ bool operator==(const CppSimdContext<ND,VL>& a, const CppSimdContext<ND,VL>& b) {
+    return (a.ctx == b.ctx) && (a.idx == b.idx);
+  }
+  template<size_t ND, size_t VL>
+  __target__ bool operator!=(const CppSimdContext<ND,VL>& a, const CppSimdContext<ND,VL>& b) {
+    return !(a == b);
   }
 
   template<size_t ND, size_t VL>
   __target__ auto CppSimdContext<ND, VL>::operator*() const -> Shape {
-    Shape ans(ctx.idx);
-    ans[ND-1] += idx;
-    return ans;
+    return ctx.indexer.oneToN(idx);
   }
 
   // Factory function for global iteration context

@@ -44,13 +44,17 @@ public:
 };
 
 template <typename T, size_t N>
-__targetBoth__ bool operator!=(const array<T,N>& a, const array<T,N>& b) {
+__targetBoth__ bool operator==(const array<T,N>& a, const array<T,N>& b) {
 
   for (size_t i = 0; i< N; ++i) {
     if (a[i] != b[i])
-      return true;
+      return false;
   }
-  return false;
+  return true;
 }
 
+template <typename T, size_t N>
+__targetBoth__ bool operator!=(const array<T,N>& a, const array<T,N>& b) {
+  return !(a == b);
+}
 #endif

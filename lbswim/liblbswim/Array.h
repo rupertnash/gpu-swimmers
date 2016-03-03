@@ -80,11 +80,20 @@ struct SpaceIndexer
   }
   
   // Compute 1D index from ND index
-  __targetBoth__ size_t operator()(const ShapeType& idx) const {
+  __targetBoth__ size_t nToOne(const ShapeType& idx) const {
     size_t ijk = 0;
     for (size_t d = 0; d < ND; ++d)
       ijk += strides[d]*idx[d];
     return ijk;
+  }
+  // Compute ND index from 1D index
+  __targetBoth__ ShapeType oneToN(size_t ijk) const {
+    ShapeType idx;
+    for (size_t d = 0; d < ND; ++d) {
+      idx[d] = ijk / strides[d];
+      ijk = ijk - idx[d] * strides[d];
+    }
+    return idx;
   }
   
   // Helper for subscripting - given a parent array of the next higher
@@ -284,9 +293,10 @@ struct Array
   __targetBoth__ ~Array() {
     if (owner) {
       delete[] data;
-      data = NULL;
+      data = nullptr;
     }
   }
+  
   // Subscript to return an array with dimensionality ND-1 or an
   // ElementWrapper, as appropriate.
   __targetBoth__ SubType operator[](size_t i) {
@@ -295,19 +305,19 @@ struct Array
   
   __targetBoth__ WrapType operator[](const ShapeType& idx) {
     WrapType ans;
-    ans.data = data + indexer(idx);
+    ans.data = data + indexer.nToOne(idx);
     // Refactor to allow layout switching
     ans.stride = indexer.size;
     return ans;
   }
-  
+
   __targetBoth__ ConstSubType operator[](size_t i) const {
     return Helper(*this, i);
   }
   
   __targetBoth__ ConstWrapType operator[](const ShapeType& idx) const {
     ConstWrapType ans;
-    ans.data = data + indexer(idx);
+    ans.data = data + indexer.nToOne(idx);
     // Refactor to allow layout switching
     ans.stride = indexer.size;
     return ans;

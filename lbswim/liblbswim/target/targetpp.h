@@ -46,8 +46,10 @@ namespace target {
 #endif
 
 
-#define FOR_TLP2(threadCtx, N) \
-  for(auto threadCtx: target::MkContext(N))
+#define FOR_TLP2(threadCtx, N)						\
+  auto __targetIterSpace = target::MkContext(N);			\
+  _Pragma("omp parallel for")						\
+  for(auto threadCtx = __targetIterSpace.begin(); threadCtx < __targetIterSpace.end(); ++threadCtx)
 
 #define FOR_TLP(N) FOR_TLP2(__targetThreadCtx, N)
 
@@ -68,8 +70,10 @@ namespace target {
   __target__ void name::Run(__VA_ARGS__)
 
 #define KERNEL_TLP(threadSpace)						\
-  for (auto threadSpace = indexSpace->begin(); threadSpace != indexSpace->end(); ++threadSpace)
-#define KERNEL_ILP(index, threadSpace)		\
+  _Pragma("omp parallel for")						\
+  for (auto threadSpace = indexSpace->begin(); threadSpace < indexSpace->end(); ++threadSpace)
+#define KERNEL_ILP(index, threadSpace)			\
+  _Pragma("omp simd")					\
   for (size_t index = 0; index < vecLen; ++index)
 
 #endif

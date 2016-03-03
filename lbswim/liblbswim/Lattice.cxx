@@ -304,6 +304,7 @@ __targetEntry__ void DoLatticeZeroForce(const LBParams& params, LDView data) {
 }
 
 void Lattice::ZeroForce() {
-  target::launch(DoLatticeZeroForce,shape)(params.Device(), data.Device());
+  auto launcher = target::launch(DoLatticeZeroForce,shape);
+  launcher(params.Device(), data.Device());
 }
 
