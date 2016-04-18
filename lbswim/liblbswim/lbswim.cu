@@ -3,7 +3,7 @@
 #include "target/target.h"
 
 #include "SharedItem.hpp"
-#include "SharedArray.hpp"
+#include "SharedNdArray.hpp"
 
 #include "Lattice.cxx"
 #include "SwimmerArray.cxx"

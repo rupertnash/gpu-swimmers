@@ -26,8 +26,8 @@ public:
   T& Host();
   const T& Host() const;
 
-  T& Device();
-  const T& Device() const;
+  T* Device();
+  const T* Device() const;
   
 };
 

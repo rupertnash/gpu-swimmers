@@ -43,7 +43,7 @@ public:
     }
     view->shape[nDims] = nElems;
     // Needs factoring to allow layout switching
-    view->strides[nDims] = sizeof(ElemType) * impl.Size();
+    view->strides[nDims] = sizeof(ElemType) * impl.element_pitch;
 
     view->internal = NULL;
   }

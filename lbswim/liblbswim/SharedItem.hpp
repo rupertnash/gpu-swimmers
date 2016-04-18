@@ -38,12 +38,12 @@ const T& SharedItem<T>::Host() const {
 }
 
 template <typename T>
-T& SharedItem<T>::Device() {
-  return *device;
+T* SharedItem<T>::Device() {
+  return device;
 }
 template <typename T>
-const T& SharedItem<T>::Device() const {
-  return *device;
+const T* SharedItem<T>::Device() const {
+  return device;
 }
 
 #endif // SHAREDITEM_HPP

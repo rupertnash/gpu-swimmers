@@ -14,7 +14,7 @@ namespace target {
   void malloc(T*& ptr, const size_t n = 1);
   // add free
   template<typename T>
-  void free(T*& ptr);
+  void free(T* ptr);
   
   template<typename T>
   void copyIn(T* targetData, const T* data, const size_t n = 1);
@@ -30,34 +30,26 @@ namespace target {
 #if defined(TARGET_MODE_CUDA)
 // CUDA backend
 #include "./cuda_backend.hpp"
+#define TARGET_DEVICE_CODE __CUDACC__
+#define TARGET_TLP_PRAGMA
+#define TARGET_ILP_PRAGMA
 
 #elif defined(TARGET_MODE_OPENMP)
-
 // OpenMP C++ backend
 #include "./cpp_backend.hpp"
+#define TARGET_TLP_PRAGMA   _Pragma("omp parallel for")
+#define TARGET_ILP_PRAGMA _Pragma("omp simd")
 
 #elif defined(TARGET_MODE_VANILLA)
 // Vanilla C++ backend
 #include "./cpp_backend.hpp"
+#define TARGET_TLP_PRAGMA
+#define TARGET_ILP_PRAGMA
 
 #else
 #error "TARGET_MODE not defined!"
 
 #endif
-
-
-#define FOR_TLP2(threadCtx, N)						\
-  auto __targetIterSpace = target::MkContext(N);			\
-  _Pragma("omp parallel for")						\
-  for(auto threadCtx = __targetIterSpace.begin(); threadCtx < __targetIterSpace.end(); ++threadCtx)
-
-#define FOR_TLP(N) FOR_TLP2(__targetThreadCtx, N)
-
-#define FOR_ILP2(threadCtx, i) \
-  for(auto i: threadCtx)
-
-#define FOR_ILP(i) FOR_ILP2(__targetThreadCtx, i)
-
 
 #include "./targetpp.hpp"
 
@@ -69,11 +61,11 @@ namespace target {
 #define TARGET_KERNEL_DEFINE(name, ...)		\
   __target__ void name::Run(__VA_ARGS__)
 
-#define KERNEL_TLP(threadSpace)						\
-  _Pragma("omp parallel for")						\
+#define FOR_TLP(threadSpace)						\
+  TARGET_TLP_PRAGMA							\
   for (auto threadSpace = indexSpace->begin(); threadSpace < indexSpace->end(); ++threadSpace)
-#define KERNEL_ILP(index, threadSpace)			\
-  _Pragma("omp simd")					\
-  for (size_t index = 0; index < vecLen; ++index)
+#define FOR_ILP(index, threadSpace)			\
+  TARGET_ILP_PRAGMA					\
+  for (size_t index = 0; index < VecLen(); ++index)
 
 #endif

@@ -29,9 +29,11 @@ __target__ Float peskin_delta(Float x) {
 }
 
 template<typename Indexable>
-__target__ array<double,DQ_d> InterpVelocity(const VectorField& lat_u,
+__target__ array<double,DQ_d> InterpVelocity(const VectorField* lat_u_ptr,
 			       const Indexable& r) {
+  auto& lat_u = *lat_u_ptr;
   auto n = lat_u.indexer.shape;
+  
   int indices[DQ_d][4];
   double deltas[DQ_d][4];
   double delta3d;

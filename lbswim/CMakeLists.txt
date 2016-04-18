@@ -8,6 +8,12 @@ set(TARGET_MODE "CUDA"
 add_definitions(-DTARGET_MODE=${TARGET_MODE} -DTARGET_MODE_${TARGET_MODE})
 add_compile_options(--std=c++11)
 
+include(CheckCXXSymbolExists)
+CHECK_CXX_SYMBOL_EXISTS("std::align" "memory" CXX_HAS_STDALIGN)
+if(NOT CXX_HAS_STDALIGN)
+  add_definitions("-DNOSTDALIGN")
+endif()
+
 add_subdirectory( liblbswim )
 
 include(UseCython)

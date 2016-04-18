@@ -12,9 +12,8 @@ namespace target {
   }
   
   template<typename T>
-  void free(T*& ptr) {
+  void free(T* ptr) {
     targetFree(reinterpret_cast<void*>(ptr));
-    ptr = nullptr;
   }
   
   template<typename T>

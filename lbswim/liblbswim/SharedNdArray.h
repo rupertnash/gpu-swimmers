@@ -16,6 +16,7 @@ class SharedItem< NdArray<T,ND,nElem> >
   SharedType* host;
   SharedType* device;
   T* device_data;
+  char* raw_device_data;
   size_t dataSize;
   
   // Helpers for implementing move semantics
@@ -36,10 +37,10 @@ class SharedItem< NdArray<T,ND,nElem> >
   ~SharedItem();
 
   SharedType& Host();
-  SharedType& Device();
+  SharedType* Device();
   
   const SharedType& Host() const;
-  const SharedType& Device() const;
+  const SharedType* Device() const;
   void H2D();
   void D2H();
 

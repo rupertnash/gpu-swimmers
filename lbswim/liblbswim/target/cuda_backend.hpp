@@ -4,25 +4,13 @@
 #include "./cuda_backend.h"
 
 namespace target {
-  template<size_t ND, size_t VL>
-  __target__ CudaContext<ND,VL>::CudaContext(const Shape& n) : extent(n) {
-    static_assert(ND > 0, "Must have at least one dimension");
-    static_assert(ND <= 3, "CUDA doesn't deal with more than 3D");
 
-    start[0] = blockIdx.x * blockDim.x + threadIdx.x;
-    if (ND > 1) {
-      start[1] = blockIdx.y * blockDim.y + threadIdx.y;
-      if (ND > 2) {
-	start[2] = (blockIdx.z * blockDim.z + threadIdx.z);
-      }
-    }
-    start[ND-1] *= VL;
-    
-    for (size_t i=0; i<ND; ++i) {
-      start[i] = (start[i] > extent[i]) ? extent[i] : start[i];
-      finish[i] = start[i];
-    }
-    finish[ND-1] = extent[ND-1];
+  template<size_t ND, size_t VL>
+  __target__ CudaContext<ND,VL>::CudaContext(const Shape& n) : extent(n),
+							       indexer(n),
+    							       start(VL * (blockIdx.x * blockDim.x + threadIdx.x)),
+							       // smaller of start+VL and indexer.size
+    							       finish(((start + VL) < indexer.size) ? (start + VL) : indexer.size) {
   }
 
   template<size_t ND, size_t VL>
@@ -42,12 +30,14 @@ namespace target {
 
   // Now CudaThreadContext
   template<size_t ND, size_t VL>
-  __target__ CudaThreadContext<ND, VL>::CudaThreadContext(const Parent& ctx_, const Shape& pos) : ctx(ctx_), idx(pos) {
+  __target__ CudaThreadContext<ND, VL>::CudaThreadContext(const Parent& ctx_, const size_t& pos) : ctx(ctx_), ijk(pos) {
+    // Must start at a point that matches the vector length.
+    assert((ijk % VL) == 0);
   }
   
   template<size_t ND, size_t VL>
   __target__ CudaThreadContext<ND, VL>& CudaThreadContext<ND, VL>::operator++() {
-    idx[ND-1] = ctx.extent[ND-1];
+    ijk += VL;
     return *this;
   }
   
@@ -55,160 +45,62 @@ namespace target {
   __target__ bool CudaThreadContext<ND, VL>::operator!=(const CudaThreadContext& other) const {
     if (&ctx != &other.ctx)
       return true;  
-    if (idx != other.idx)
+    if (ijk != other.ijk)
       return true;
     return false;
   }
   
   template<size_t ND, size_t VL>
+  __target__ bool operator<(const CudaThreadContext<ND, VL>& a, const CudaThreadContext<ND, VL>& b) {
+    return a.ijk < b.ijk;
+  }
+
+  template<size_t ND, size_t VL>
   __target__ auto CudaThreadContext<ND, VL>::operator[](size_t ilp_idx) const -> Shape {
-    Shape ans = idx;
-    ans[ND-1] += ilp_idx;
-    return ans;
+    return ctx.indexer.oneToN(ijk + ilp_idx);
   }
 
   template<size_t ND, size_t VL>
   __target__ const CudaThreadContext<ND, VL>& CudaThreadContext<ND, VL>::operator*() const {
     return *this;
   }
-  
   template<size_t ND, size_t VL>
-  __target__ CudaSimdContext<ND, VL> CudaThreadContext<ND, VL>::begin() const {
-    return CudaSimdContext<ND, VL>(*this, 0);
-  }
-  
-  template<size_t ND, size_t VL>
-  __target__ CudaSimdContext<ND, VL> CudaThreadContext<ND, VL>::end() const {
-    return CudaSimdContext<ND, VL>(*this, VL);
-  }
-  
-  // CudaSimdContext
-  template<size_t ND, size_t VL>
-  __target__ CudaSimdContext<ND, VL>::CudaSimdContext(const Parent& ctx_, const size_t& pos)
-    : ctx(ctx_), idx(pos) {
-  }
-  
-  template<size_t ND, size_t VL>
-  __target__ CudaSimdContext<ND, VL>& CudaSimdContext<ND, VL>::operator++() {
-    ++idx;
-    return *this;
-  }
-
-  template<size_t ND, size_t VL>
-  __target__ bool CudaSimdContext<ND, VL>::operator!=(const CudaSimdContext& other) const {
-    if (&ctx != &other.ctx)
-      return true;
-    if (idx != other.idx)
-      return true;
-    return false;
-  }
-
-  template<size_t ND, size_t VL>
-  __target__ auto CudaSimdContext<ND, VL>::operator*() const -> Shape {
-    Shape ans(ctx.idx);
-    ans[ND-1] += idx;
+  template <class ArrayT>
+  __target__ VectorView<ArrayT, VL> CudaThreadContext<ND, VL>::GetCurrentElements(ArrayT* arr) {
+    //static_assert(arr.MaxVVL() >= VL, "Array not guaranteed to work with this vector length");
+    assert(ijk % VL == 0);
+    
+    VectorView<ArrayT, VL> ans;
+    ans.zero.data = arr->data + ijk;
+    ans.zero.stride = arr->element_pitch;
     return ans;
   }
-
-  // Kernel Launcher - knows the types it will be called with.
-  template <size_t ND, class... FuncArgs>
-  CudaLauncher<ND, FuncArgs...>::CudaLauncher(const ShapeT& s, const FuncT f) : shape(s), func(f) {
-    static_assert(ND > 0, "Must have at least one dimension");
-    static_assert(ND <= 3, "CUDA doesn't deal with more than 3D");
-    
-    const size_t bs_x = ND == 1 ? 128 : (ND == 2 ?  8 : 4);
-    const size_t bs_y = ND == 1 ?   1 : (ND == 2 ? 16 : 4);
-    const size_t bs_z = ND == 1 ?   1 : (ND == 2 ?  1 : 8);
-
-    blockShape = {bs_x, bs_y, bs_z};
-
-    switch (ND) {
-    case 1:
-      nBlocks.x = ((shape[0] / VVL) + blockShape.x - 1) / blockShape.x;
-      break;
-    case 2:
-      nBlocks.x = (shape[0] + blockShape.x - 1)/blockShape.x;
-      nBlocks.y = ((shape[1] / VVL) + blockShape.y - 1) / blockShape.y;
-      break;
-    case 3:
-      nBlocks.x = (shape[0] + blockShape.x - 1)/blockShape.x;
-      nBlocks.y = (shape[1] + blockShape.y - 1)/blockShape.y;
-      nBlocks.z = ((shape[2]/VVL) + blockShape.z - 1)/blockShape.z;
-      break;
-    default:
-      break;
-    }
-    
-    const size_t total_threads =  bs_x * bs_y * bs_z;
-    static_assert(total_threads == DEFAULT_TPB, "block shape doesn't match DEFAULT_TPB");
+  
+  template<size_t ND, size_t VL>
+  __target__ auto CudaThreadContext<ND, VL>::GetNdIndex(size_t i) const -> Shape {
+    return ctx.indexer.oneToN(ijk + i);
+  }
+  template<class AT, size_t VL>
+  __target__ auto VectorView<AT, VL>::operator[](size_t i) -> WrapType {
+    WrapType ans = zero;
+    ans.data += i;
+    return ans;
   }
   
-  template <size_t ND, class... FuncArgs>
-  void CudaLauncher<ND, FuncArgs...>::operator()(FuncArgs... args) {
-    func<<<nBlocks, blockShape>>>(args...);
-  }
-
-  // Partial specialisation on the pseudo typedef of the args
-  // parameter pack. This subclasses the class we actually want but
-  // then inherits its constructor.
-  template <size_t ND, class... FuncArgs>
-  struct CudaLauncher<ND, variadic_typedef<FuncArgs...> > : public CudaLauncher<ND, FuncArgs...>
-  {
-    // Inherit c'tor
-    using CudaLauncher<ND, FuncArgs...>::CudaLauncher;
-  };
-
-  // Factory function for global iteration context
-  template <size_t ND>
-  __target__ CudaContext<ND> MkContext(const array<size_t, ND>& shape) {
-    return CudaContext<ND>(shape);
-  }
-  
-  // Factory function for Launchers.
-  //
-  // Uses the function traits and the specialisation on the variadic
-  // pseudo typedef to construct the right type of launcher
-  template<class FuncT, class ShapeT>
-  CudaLauncher<ShapeT::size(), typename function_traits<FuncT>::args_type>
-  launch(FuncT* f, ShapeT shape) {
-    return CudaLauncher<ShapeT::size(), typename function_traits<FuncT>::args_type>(shape, f);
-  }
-
-
   template<class Impl>
   template<size_t ND>
   template<size_t VL>
   template<class... Args>
-  __targetBoth__ Kernel<Impl>::Dims<ND>::VecLen<VL>::ArgTypes<Args...>::ArgTypes(const Index& shape) {
+  __targetBoth__ Kernel<Impl>::Dims<ND>::VecLen<VL>::ArgTypes<Args...>::ArgTypes(const Index& shape) : extent(shape) {
     static_assert(ND > 0, "Must have at least one dimension");
-    static_assert(ND <= 3, "CUDA doesn't deal with more than 3D");
+    auto nElem = Product(shape);
+    // Round up to the next VL
+    auto nElem_VL = ((nElem-1) / VL + 1) * VL;
     
-    const size_t bs_x = ND == 1 ? 128 : (ND == 2 ?  8 : 4);
-    const size_t bs_y = ND == 1 ?   1 : (ND == 2 ? 16 : 4);
-    const size_t bs_z = ND == 1 ?   1 : (ND == 2 ?  1 : 8);
-    const size_t total_threads =  bs_x * bs_y * bs_z;
-    static_assert(total_threads == DEFAULT_TPB, "block shape doesn't match DEFAULT_TPB");
-
-    extent = shape;
-    blockShape = {bs_x, bs_y, bs_z};
-
-    switch (ND) {
-    case 1:
-       nBlocks.x = ((shape[0] / VL) + blockShape.x - 1) / blockShape.x;
-      break;
-    case 2:
-      nBlocks.x = (shape[0] + blockShape.x - 1)/ blockShape.x;
-      nBlocks.y = ((shape[1] / VL) + blockShape.y - 1) / blockShape.y;
-      break;
-    case 3:
-      nBlocks.x = (shape[0] + blockShape.x - 1)/blockShape.x;
-      nBlocks.y = (shape[1] + blockShape.y - 1)/blockShape.y;
-      nBlocks.z = ((shape[2] / VL) + blockShape.z - 1)/blockShape.z;
-      break;
-    default:
-      break;
-    }
+    blockShape = DEFAULT_TPB;
+    nBlocks = ((nElem_VL / VL) + blockShape - 1) / blockShape;
   }
+  
   template<class Impl, size_t ND, size_t VL, class... Args>
   __targetEntry__ void TargetKernelEntry(const array<size_t, ND> shape, Args... args) {
     Impl kernel(shape);
@@ -221,8 +113,8 @@ namespace target {
   template<size_t ND>
   template<size_t VL>
   template<class... Args>
-  void Kernel<Impl>::Dims<ND>::VecLen<VL>::ArgTypes<Args...>::Launch(Args&&... args) {
-    TargetKernelEntry<Impl, ND, VL, Args...> <<<nBlocks, blockShape>>> (extent, std::forward<Args>(args)...);
+  void Kernel<Impl>::Dims<ND>::VecLen<VL>::ArgTypes<Args...>::operator()(Args... args) {
+    TargetKernelEntry<Impl, ND, VL, Args...> <<<nBlocks, blockShape>>> (extent, args...);
   }
 
 }

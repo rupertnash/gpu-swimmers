@@ -4,6 +4,7 @@
 
 #ifdef __NVCC__
 #include <curand_kernel.h>
+
 #else
 struct curandStateXORWOW;
 #endif

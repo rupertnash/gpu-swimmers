@@ -18,8 +18,45 @@
 
 #include "Nd.h"
 
+#if defined(NOSTDALIGN) || defined(TARGET_MODE_CUDA)
+namespace std {
+  __targetBoth__ inline void*
+  align(size_t align, size_t size, void*& ptr, size_t& space) noexcept
+  {
+    const auto intptr = reinterpret_cast<uintptr_t>(ptr);
+    const auto aligned = (intptr - 1u + align) & -align;
+    const auto diff = aligned - intptr;
+    if ((size + diff) > space)
+      return nullptr;
+    else
+      {
+	space -= diff;
+	return ptr = reinterpret_cast<void*>(aligned);
+      }
+  }
+}
+#endif
+
+__targetBoth__ inline void* Malloc(size_t size) {
+#ifdef TARGET_DEVICE_CODE
+  char* ans;
+  target::malloc(ans, size);
+  return static_cast<void*>(ans);
+#else
+  return std::malloc(size);
+#endif
+}
+__targetBoth__ inline void Free(void* ptr) {
+#ifdef TARGET_DEVICE_CODE
+  char* tmp = static_cast<char*>(ptr);
+  target::free<char>(static_cast<char*>(tmp));
+#else
+  std::free(ptr);
+#endif
+}
+
 // Forward declare
-template <typename T, size_t ND, size_t nElem = 1>
+template <typename T, size_t ND, size_t nElem = 1, size_t ALIGN = 0, size_t MAX_VVL = 16>
 struct NdArray;
 
 // Wrapper for a single element vector of an NdArray.
@@ -37,50 +74,63 @@ public:
     return data[i * stride];
   }
   // Get a const element
-  __targetBoth__ const T& operator[](const size_t& i) const {
+ __targetBoth__ const T& operator[](const size_t& i) const {
     return data[i * stride];
   }
 };
 
-template<typename T, size_t ND, size_t nElem>
-__targetBoth__ typename NdArray<T, ND, nElem>::SubType Helper(NdArray<T, ND, nElem>& self, const size_t i) {
-  NdArray<T, ND-1, nElem> ans;
-  ans.data = self.data + i * self.indexer.strides[0];
-  ans.owner = false;
+template<typename T, size_t ND, size_t nElem, size_t ALIGN, size_t MAX_VVL>
+__targetBoth__ typename NdArray<T, ND, nElem, ALIGN, MAX_VVL>::SubType Helper(NdArray<T, ND, nElem, ALIGN, MAX_VVL>& self, const size_t i) {
+  NdArray<T, ND-1, nElem, ALIGN, MAX_VVL> ans;
+  const auto offset = i * self.indexer.strides[0];
+  ans.data = self.data + offset;
+  ans.buffer_size_bytes = self.buffer_size_bytes - offset*sizeof(T);
+  ans.raw_data = nullptr;
+  ans.element_pitch = self.element_pitch;
   ans.indexer = decltype(ans.indexer)::ReduceFrom(self.indexer);
   return ans;
 }
 
-template<typename T, size_t nElem>
-__targetBoth__ typename NdArray<T, 1, nElem>::SubType Helper(NdArray<T, 1, nElem>& self, const size_t i) {
+template<typename T, size_t nElem, size_t ALIGN, size_t MAX_VVL>
+__targetBoth__ typename NdArray<T, 1, nElem, ALIGN, MAX_VVL>::SubType Helper(NdArray<T, 1, nElem, ALIGN, MAX_VVL>& self, const size_t i) {
   ElemWrapper<T, nElem> ans;
   ans.data = self.data + i * self.indexer.strides[0];
   // Refactor to allow layout switching
-  ans.stride = self.indexer.size;
+  ans.stride = self.element_pitch;
   return ans;
 }
-template<typename T, size_t ND, size_t nElem>
-__targetBoth__ typename NdArray<T, ND, nElem>::ConstSubType Helper(const NdArray<T, ND, nElem>& self, const size_t i) {
-  NdArray<T, ND-1, nElem> ans;
-  ans.data = self.data + i * self.indexer.strides[0];
-  ans.owner = false;
+template<typename T, size_t ND, size_t nElem, size_t ALIGN, size_t MAX_VVL>
+__targetBoth__ typename NdArray<T, ND, nElem, ALIGN, MAX_VVL>::ConstSubType Helper(const NdArray<T, ND, nElem, ALIGN, MAX_VVL>& self, const size_t i) {
+  NdArray<T, ND-1, nElem, ALIGN, MAX_VVL> ans;
+  const auto offset = i * self.indexer.strides[0];
+  ans.data = self.data + offset;
+  ans.buffer_size_bytes = self.buffer_size_bytes - offset*sizeof(T);
+  ans.raw_data = nullptr;
+  ans.element_pitch = self.element_pitch;
   ans.indexer = decltype(ans.indexer)::ReduceFrom(self.indexer);
   return ans;
 }
 
-template<typename T, size_t nElem>
-__targetBoth__ typename NdArray<T, 1, nElem>::ConstSubType Helper(const NdArray<T, 1, nElem>& self, const size_t i) {
+template<typename T, size_t nElem, size_t ALIGN, size_t MAX_VVL>
+__targetBoth__ typename NdArray<T, 1, nElem, ALIGN, MAX_VVL>::ConstSubType Helper(const NdArray<T, 1, nElem, ALIGN, MAX_VVL>& self, const size_t i) {
   ElemWrapper<const T, nElem> ans;
   ans.data = self.data + i * self.indexer.strides[0];
   // Refactor to allow layout switching
-  ans.stride = self.indexer.size;
+  ans.stride = self.element_pitch;
   return ans;
 }
 
 // Core array class.
-template <typename T, size_t ND, size_t nElem>
+// ALIGN = byte boundary required by the vector instructions you want to use. 0 => alignof(T)
+// MAX_VVL = the max VVL you want to use
+template <typename T, size_t ND, size_t nElem, size_t ALIGN, size_t MAX_VVL>
 struct NdArray
 {
+  __targetBoth__ constexpr static size_t Alignment() {
+    return ALIGN ? ALIGN : alignof(T);
+  }
+    
+  //static_assert(MAX_VVL >= Alignment(), "Padding must be >= to alignment");
   typedef T ElemType;
   typedef SpaceIndexer<ND> IdxType;
   typedef typename IdxType::ShapeType ShapeType;
@@ -88,15 +138,23 @@ struct NdArray
   typedef ElemWrapper<const T, nElem> ConstWrapType;
   //typedef std::shared_ptr<T> Ptr;
   
-  typedef typename std::conditional<ND==1, WrapType, NdArray<T, ND-1, nElem> >::type SubType;
-  typedef typename std::conditional<ND==1, ConstWrapType, const NdArray<T, ND-1, nElem> >::type ConstSubType;
+  typedef typename std::conditional<ND==1, WrapType, NdArray<T, ND-1, nElem, ALIGN, MAX_VVL> >::type SubType;
+  typedef typename std::conditional<ND==1, ConstWrapType, const NdArray<T, ND-1, nElem, ALIGN, MAX_VVL> >::type ConstSubType;
   
   IdxType indexer;
   // Pointer to our zeroth element
   T* data;
-  // Flag telling if this instance owns the data
-  bool owner;
-    
+  // Underlying, un-aligned data storage & size
+  // non-null => this instance owns the data & vice-versa
+  size_t buffer_size_bytes;
+  void* raw_data;
+  // Stride (in units of sizeof(T) bytes) between the elements of a contained item
+  size_t element_pitch;
+
+  __targetBoth__ bool OwnsData() const {
+    return raw_data != nullptr;
+  }
+  
   // struct iterator : public std::iterator<std::bidirectional_iterator_tag, WrapType> {
   //   NdArray& container;
   //   size_t ijk;
@@ -130,11 +188,15 @@ struct NdArray
   //     return *this;
   //   }
   // };
-  __targetBoth__ size_t nElems() const {
+  __targetBoth__ constexpr static size_t nElems() {
     return nElem;
   }
   
-  __targetBoth__ size_t nDims() const {
+  __targetBoth__ constexpr static size_t MaxVVL() {
+    return MAX_VVL;
+  }
+  
+  __targetBoth__ constexpr static size_t nDims() {
     return ND;
   }
   __targetBoth__ const ShapeType& Shape() const {
@@ -148,55 +210,78 @@ struct NdArray
   }
   
   // Default constructor
-  __targetBoth__ NdArray() : indexer(ShapeType()), data(nullptr), owner(false)
+  __targetBoth__ NdArray() : indexer(ShapeType()), data(nullptr), buffer_size_bytes(0), raw_data(nullptr), element_pitch(0)
   {
   }
   // Construct a given shape array
-  __targetBoth__ NdArray(const ShapeType& shape) : indexer(shape), owner(true)
+  __targetBoth__ NdArray(const ShapeType& shape) : indexer(shape)
   {
-    size_t total_size = nElem * indexer.size;
-    data = new T[total_size];
+    element_pitch = ((indexer.size - 1)/MAX_VVL + 1) * MAX_VVL;
+    const auto element_pitch_bytes = element_pitch * sizeof(T);
+    const auto unpadded_buffer_size_bytes = nElem * element_pitch_bytes;
+    buffer_size_bytes = unpadded_buffer_size_bytes + Alignment();
+    raw_data = std::malloc(buffer_size_bytes);
+    void* tmp = raw_data;
+    assert(std::align(Alignment(), unpadded_buffer_size_bytes, tmp, buffer_size_bytes) != NULL);
+    data = static_cast<T*>(tmp);
   }
 
-  NdArray(const NdArray& other) : indexer(other.indexer), data(other.data), owner(false)
+  __targetBoth__ NdArray(const NdArray& other) : indexer(other.indexer),
+						 data(other.data),
+						 buffer_size_bytes(other.buffer_size_bytes),
+						 raw_data(nullptr),
+						 element_pitch(other.element_pitch)
   {
   }
   
-  NdArray& operator=(const NdArray& other) {
-    if (owner) 
-      delete[] data;
+  __targetBoth__ NdArray& operator=(const NdArray& other) {
+    if (OwnsData()) {
+      std::free(raw_data);
+      raw_data = nullptr;
+    }
     
     indexer = other.indexer;
     data = other.data;
-    owner = false;
+    buffer_size_bytes = other.buffer_size_bytes;
+    element_pitch = other.element_pitch;
+    
     return *this;
   }
 
-  NdArray(NdArray&& other) : indexer(other.indexer), data(other.data), owner(other.owner) 
+  __targetBoth__ NdArray(NdArray&& other) : indexer(other.indexer),
+					    data(other.data),
+					    buffer_size_bytes(other.buffer_size_bytes),
+					    raw_data(other.raw_data),
+					    element_pitch(other.element_pitch)
   {
     other.indexer = IdxType();
     other.data = nullptr;
-    other.owner = false;
+    other.raw_data = nullptr;
   }
   
-  NdArray& operator=(NdArray&& other) {
-    if (owner) 
-      delete[] data;
+  __targetBoth__ NdArray& operator=(NdArray&& other) {
+    if (OwnsData()) {
+      std::free(raw_data);
+      raw_data = nullptr;
+    }
     
     indexer = other.indexer;
     data = other.data;
-    owner = other.owner;
+    buffer_size_bytes = other.buffer_size_bytes;
+    raw_data = other.raw_data;
+    element_pitch = other.element_pitch;
     
     other.indexer = IdxType();
     other.data = nullptr;
-    other.owner = false;
+    other.raw_data = nullptr;
     
     return *this;
   }
   
   __targetBoth__ ~NdArray() {
-    if (owner) {
-      delete[] data;
+    if (OwnsData()) {
+      std::free(raw_data);
+      raw_data = nullptr;
       data = nullptr;
     }
   }
@@ -211,7 +296,7 @@ struct NdArray
     WrapType ans;
     ans.data = data + indexer.nToOne(idx);
     // Refactor to allow layout switching
-    ans.stride = indexer.size;
+    ans.stride = element_pitch;
     return ans;
   }
 
@@ -223,7 +308,7 @@ struct NdArray
     ConstWrapType ans;
     ans.data = data + indexer.nToOne(idx);
     // Refactor to allow layout switching
-    ans.stride = indexer.size;
+    ans.stride = element_pitch;
     return ans;
   }
   

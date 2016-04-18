@@ -28,16 +28,14 @@ LDView LatticeData::Host() {
 }
 LDView LatticeData::Device(){
   LDView v;
-  v.rho = &rho.Device();
-  v.u = &u.Device();
-  v.force = &force.Device();
-  v.fOld = &fOld.Device();
-  v.fNew = &fNew.Device();
+  v.rho = rho.Device();
+  v.u = u.Device();
+  v.force = force.Device();
+  v.fOld = fOld.Device();
+  v.fNew = fNew.Device();
   return v;
 }
 
-//template void SharedNdArray<double>::H2D();
-//template class SharedNdArray<double>;
 Lattice::Lattice(const Shape& shape_, double tau_s, double tau_b) : shape(shape_), data(shape_), time_step(0) {
   // Set up params and move to device
   params.Host().tau_s = tau_s;
@@ -57,23 +55,23 @@ __targetConst__ double DQ_delta[DQ_d][DQ_d] = {{1.0, 0.0, 0.0},
 					       {0.0, 1.0, 0.0},
 					       {0.0, 0.0, 1.0}};
 
-__targetEntry__ void DoStep(const LBParams& params, LDView data) {
-  const Shape& shape = data.rho->indexer.shape;
-  
-  FOR_TLP(shape) {
-    FOR_ILP(siteIdx) {
-      
-      auto fOld = (*data.fOld)[siteIdx];
-      auto force = (*data.force)[siteIdx];
-      
+TARGET_KERNEL_DECLARE(LatticeStepK, 3, VVL, const LBParams*, LDView);
+TARGET_KERNEL_DEFINE(LatticeStepK, const LBParams* params, LDView data) {
+  auto shape = data.rho->indexer.shape;
+  FOR_TLP(threadCtx) {
+    auto fOld = threadCtx.GetCurrentElements(data.fOld);
+    auto force = threadCtx.GetCurrentElements(data.force);
+    
+    FOR_ILP(siteIdx, threadCtx) {
+            
       double mode[DQ_q];
       /* convenience vars */
       double S[DQ_d][DQ_d];
       double u[DQ_d];
       double usq, TrS, uDOTf;
       
-      const double tau_s = params.tau_s;
-      const double tau_b = params.tau_b;
+      const double tau_s = params->tau_s;
+      const double tau_b = params->tau_b;
       const double omega_s = 1.0 / (tau_s + 0.5);
       const double omega_b = 1.0 / (tau_b + 0.5);
       
@@ -82,10 +80,10 @@ __targetEntry__ void DoStep(const LBParams& params, LDView data) {
       
       /* compute the modes */
       for (size_t m=0; m<DQ_q; m++) {
-	mode[m] = 0.;
-	for (size_t p=0; p<DQ_q; p++) {
-	  mode[m] += fOld[p] * params.mm[m][p];
-	}
+  	mode[m] = 0.;
+  	for (size_t p=0; p<DQ_q; p++) {
+  	  mode[m] += fOld[siteIdx][p] * params->mm[m][p];
+  	}
       }
       
       /* Work out the site fluid velocity
@@ -97,10 +95,10 @@ __targetEntry__ void DoStep(const LBParams& params, LDView data) {
       usq = 0.;
       uDOTf = 0.;
       for (size_t a=0; a<DQ_d; a++) {
-	u[a] = (mode[DQ_mom(a)] + 0.5*force[a]) / mode[DQ_rho];
-	mode[DQ_mom(a)] += force[a];
-	usq += u[a]*u[a];
-	uDOTf += u[a]*force[a];
+  	u[a] = (mode[DQ_mom(a)] + 0.5*force[siteIdx][a]) / mode[DQ_rho];
+  	mode[DQ_mom(a)] += force[siteIdx][a];
+  	usq += u[a]*u[a];
+  	uDOTf += u[a]*force[siteIdx][a];
       }
       
       /* For unequal relax trace & traceless part at different rates.
@@ -122,11 +120,11 @@ __targetEntry__ void DoStep(const LBParams& params, LDView data) {
       /* Form the trace part */
       TrS = 0.;
       for (size_t a=0; a<DQ_d; a++) {
-	TrS += S[a][a];
+  	TrS += S[a][a];
       }
       /* And the traceless part */
       for (size_t a=0; a<DQ_d; a++) {
-	S[a][a] -= TrS/DQ_d;
+  	S[a][a] -= TrS/DQ_d;
       }
       
       /* relax the trace */
@@ -136,15 +134,15 @@ __targetEntry__ void DoStep(const LBParams& params, LDView data) {
       
       /* and the traceless part */
       for (size_t a=0; a<DQ_d; a++) {
-	for (size_t b=0; b<DQ_d; b++) {
-	  S[a][b] -= omega_s*(S[a][b] - 
-			      mode[DQ_rho]*(u[a]*u[b] -usq*DQ_delta[a][b]));
+  	for (size_t b=0; b<DQ_d; b++) {
+  	  S[a][b] -= omega_s*(S[a][b] - 
+  			      mode[DQ_rho]*(u[a]*u[b] -usq*DQ_delta[a][b]));
 	  
-	  /* including traceless force */
-	  S[a][b] += 2.*omega_s*tau_s * (u[a]*force[b] + force[a]*u[b] - 2. * uDOTf * DQ_delta[a][b]);
-	}
-	/* add the trace back on */
-	S[a][a] += TrS / DQ_d;
+  	  /* including traceless force */
+  	  S[a][b] += 2.*omega_s*tau_s * (u[a]*force[siteIdx][b] + force[siteIdx][a]*u[b] - 2. * uDOTf * DQ_delta[a][b]);
+  	}
+  	/* add the trace back on */
+  	S[a][a] += TrS / DQ_d;
       }
       
       /* copy S back into modes[] */
@@ -166,21 +164,22 @@ __targetEntry__ void DoStep(const LBParams& params, LDView data) {
     
       /* project back to the velocity basis */
       for (size_t p=0; p<DQ_q; p++) {
-	fPostCollision[p] = 0.;
-	for (size_t m=0; m<DQ_q; m++) {
-	  fPostCollision[p] += mode[m] * params.mmi[p][m];
-	}
+  	fPostCollision[p] = 0.;
+  	for (size_t m=0; m<DQ_q; m++) {
+  	  fPostCollision[p] += mode[m] * params->mmi[p][m];
+  	}
       }
       
       /* Stream */
+      const Shape myIdx = threadCtx.GetNdIndex(siteIdx);
       for (size_t p=0; p<DQ_q; p++) {
-	const int* cp = params.ci[p];
-	Shape destIdx;
-	for (size_t a=0; a<DQ_d; a++) {
-	  /* This does the PBC */
-	  destIdx[a] = (siteIdx[a] + cp[a] + shape[a]) % shape[a];
-	}
-	(*data.fNew)[destIdx][p] = fPostCollision[p];
+  	const int* cp = params->ci[p];
+  	Shape destIdx;
+  	for (size_t a=0; a<DQ_d; a++) {
+  	  /* This does the PBC */
+  	  destIdx[a] = (myIdx[a] + cp[a] + shape[a]) % shape[a];
+  	}
+  	(*data.fNew)[destIdx][p] = fPostCollision[p];
       }
     
     }
@@ -189,8 +188,9 @@ __targetEntry__ void DoStep(const LBParams& params, LDView data) {
 
 void Lattice::Step() {
   // Call the target kernel
-  target::launch(DoStep, shape)(params.Device(), data.Device());
-  
+  auto k = LatticeStepK(shape);
+  k(params.Device(), data.Device());
+
   // Wait for completion
   target::synchronize();
 
@@ -200,111 +200,111 @@ void Lattice::Step() {
   time_step++;
 }
 
-
-__targetEntry__ void DoCalcHydro(const LBParams& params, LDView data) {
-  const Shape& shape = data.rho->indexer.shape;
-  
-  FOR_TLP(shape) {
-    FOR_ILP(siteIdx) {
+TARGET_KERNEL_DECLARE(LatticeCalcHydroK, 3, VVL, const LBParams*, LDView);
+TARGET_KERNEL_DEFINE(LatticeCalcHydroK, const LBParams* params, LDView data) {
+  FOR_TLP(threadCtx) {
+    /* dists at time = t */
+    auto f_t = threadCtx.GetCurrentElements(data.fOld);
+    auto force = threadCtx.GetCurrentElements(data.force);
+    auto u = threadCtx.GetCurrentElements(data.u);
+    auto rho = threadCtx.GetCurrentElements(data.rho);
+    FOR_ILP(siteIdx, threadCtx) {
       /* Indices for loops over dists/modes */
       size_t m, p;
       double mode[DQ_q];
-
-      /* dists at time = t */
-      auto f_t = const_cast<const DistField*>(data.fOld)->operator[](siteIdx);
-      auto force = const_cast<const VectorField*>(data.force)->operator[](siteIdx);
-      auto u = data.u->operator[](siteIdx);
-      auto rho = data.rho->operator[](siteIdx);
-
+      
       /* compute the modes */
       for (m=0; m<DQ_q; m++) {
-	mode[m] = 0.;
-	for (p=0; p<DQ_q; p++) {
-	  mode[m] += f_t[p] * params.mm[m][p];
-	}
+  	mode[m] = 0.;
+  	for (p=0; p<DQ_q; p++) {
+  	  mode[m] += f_t[siteIdx][p] * params->mm[m][p];
+  	}
       }
   
-      rho[0] = mode[DQ_rho];
+      rho[siteIdx][0] = mode[DQ_rho];
   
       /* Work out the site fluid velocity
        *   rho*u= (rho*u') + F*\Delta t /2
        */
       for (size_t a=0; a<DQ_d; a++) {
-	u[a] = (mode[DQ_mom(a)] + 0.5*force[a]) / mode[DQ_rho];
+  	u[siteIdx][a] = (mode[DQ_mom(a)] + 0.5*force[siteIdx][a]) / mode[DQ_rho];
       }
     }
-  }	
+  }
 }
 
 void Lattice::CalcHydro() {
-  target::launch(DoCalcHydro, shape)(params.Device(), data.Device());
+  LatticeCalcHydroK k(shape);
+  k(params.Device(), data.Device());
   target::synchronize();
 }
 
-__targetEntry__ void DoInitFromHydro(const LBParams& params, LDView data) {
-  const Shape& shape = data.rho->indexer.shape;
-  FOR_TLP(shape) {
-    FOR_ILP(siteIdx) {
-      /* dists at time = t */
-      auto f_t = data.fOld->operator[](siteIdx);
-      auto u = const_cast<const VectorField*>(data.u)->operator[](siteIdx);
-      auto rho = const_cast<const ScalarField*>(data.rho)->operator[](siteIdx)[0];
+TARGET_KERNEL_DECLARE(LatticeInitFromHydroK, 3, VVL, const LBParams*, LDView);
+TARGET_KERNEL_DEFINE(LatticeInitFromHydroK, const LBParams* params, LDView data) {
+  FOR_TLP(threadCtx) {
+    /* dists at time = t */
+    auto f_t = threadCtx.GetCurrentElements(data.fOld);
+    auto u = threadCtx.GetCurrentElements(data.u);
+    auto rho = threadCtx.GetCurrentElements(data.rho);
 
-      /* Indices for loops over dists/modes */
-      size_t m, p;
+    FOR_ILP(index, threadCtx) {
       /* Create the modes, all zeroed out */
-      array<double, DQ_q> mode;
-
+      double mode[DQ_q];
+      for (size_t m = 0; m < DQ_q; m++)
+	mode[m] = 0;
+      
       /* Now set the equilibrium values */
       /* Density */
-      mode[DQ_rho] = rho;
-  
+      mode[DQ_rho] = rho[index][0];
+      
       /* Momentum */
       for (size_t a=0; a<DQ_d; a++) {
-	mode[DQ_mom(a)] = rho * u[a];// - 0.5*force[a*nSites + ijk];
+  	mode[DQ_mom(a)] = rho[index][0] * u[index][a];// - 0.5*force[a*nSites + ijk];
       }
-
+      
       /* Stress */
-      mode[DQ_SXX] = rho * u[DQ_X] * u[DQ_X];
-      mode[DQ_SXY] = rho * u[DQ_X] * u[DQ_Y];
-      mode[DQ_SXZ] = rho * u[DQ_X] * u[DQ_Z];
+      mode[DQ_SXX] = rho[index][0] * u[index][DQ_X] * u[index][DQ_X];
+      mode[DQ_SXY] = rho[index][0] * u[index][DQ_X] * u[index][DQ_Y];
+      mode[DQ_SXZ] = rho[index][0] * u[index][DQ_X] * u[index][DQ_Z];
   
-      mode[DQ_SYY] = rho * u[DQ_Y] * u[DQ_Y];
-      mode[DQ_SYZ] = rho * u[DQ_Y] * u[DQ_Z];
+      mode[DQ_SYY] = rho[index][0] * u[index][DQ_Y] * u[index][DQ_Y];
+      mode[DQ_SYZ] = rho[index][0] * u[index][DQ_Y] * u[index][DQ_Z];
   
-      mode[DQ_SZZ] = rho * u[DQ_Z] * u[DQ_Z];
+      mode[DQ_SZZ] = rho[index][0] * u[index][DQ_Z] * u[index][DQ_Z];
 
       /* Now project modes->dists */
-      for (p=0; p<DQ_q; p++) {
-	f_t[p] = 0.;
-	for (m=0; m<DQ_q; m++) {
-	  f_t[p] += mode[m] * params.mmi[p][m];
-	}
+      for (size_t p=0; p<DQ_q; p++) {
+  	f_t[index][p] = 0.;
+  	for (size_t m=0; m<DQ_q; m++) {
+  	  f_t[index][p] += mode[m] * params->mmi[p][m];
+  	}
       }
     }
   }
 }
 
 void Lattice::InitFromHydro() {
-  target::launch(DoInitFromHydro, shape)(params.Device(), data.Device());
+  LatticeInitFromHydroK k(shape);
+  k(params.Device(), data.Device());
   target::synchronize();
 }
 
-__targetEntry__ void DoLatticeZeroForce(const LBParams& params, LDView data) {
-  const Shape& shape = data.rho->indexer.shape;
-  FOR_TLP(shape) {
-    auto& force = *data.force;
-    
-    for (size_t a=0; a<DQ_d; a++) {
-      FOR_ILP(siteIdx) {
-	force[siteIdx][a] = 0.0;
+
+TARGET_KERNEL_DECLARE(LatticeZeroForceK, 3, VVL, const LBParams*, LDView);
+TARGET_KERNEL_DEFINE(LatticeZeroForceK, const LBParams* params, LDView data) {
+  FOR_TLP(threadCtx) {
+    auto force_v = threadCtx.GetCurrentElements(data.force);
+    for (auto a = 0; a <DQ_d; ++a) {
+      FOR_ILP(i, threadCtx) {
+	force_v[i][a] = 0;
       }
     }
   }
 }
 
 void Lattice::ZeroForce() {
-  auto launcher = target::launch(DoLatticeZeroForce,shape);
+  auto launcher = LatticeZeroForceK(shape);
   launcher(params.Device(), data.Device());
+  target::synchronize();
 }
 

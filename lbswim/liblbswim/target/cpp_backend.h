@@ -12,9 +12,9 @@ namespace target {
   // Forward declarations
   template<size_t, size_t>
   struct CppThreadContext;
-  template<size_t, size_t>
-  struct CppSimdContext;
-
+  template<class, size_t>
+  struct VectorView;
+  
   // Target-only class that controls the iteration over an index space
   template<size_t ND = 1, size_t VL = VVL>
   struct CppContext {
@@ -72,11 +72,16 @@ namespace target {
     __target__ CppThreadContext& operator-=(std::ptrdiff_t);
 
     __target__ size_t operator[](std::ptrdiff_t) const;
+
+    // Get the current index slice from an array
+    template <class ArrayT>
+    __target__ VectorView<ArrayT, VL> GetCurrentElements(ArrayT* arr);
     
-    // Container protocol
-    __target__ CppSimdContext<ND, VL> begin() const;
-    __target__ CppSimdContext<ND, VL> end() const;
-  
+    Shape GetNdIndex(size_t i) const;
+    
+    __target__ constexpr size_t VectorLength() const {
+      return VL;
+    }
     // Global iteration space
     const Context& ctx;
     // Current position of this thread in its iteration
@@ -99,57 +104,17 @@ namespace target {
   template<size_t ND = 1, size_t VL = VVL>
   std::ptrdiff_t operator-(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b);
   
-  // Target-only class for instruction-level iteration over the space
-  template<size_t ND = 1, size_t VL = VVL>
-  struct CppSimdContext {
-  
-    typedef CppContext<ND, VL> Context;
-    typedef typename Context::Shape Shape;
-  
-    // Constructor
-    __target__ CppSimdContext(const Context& ctx_, const size_t& pos);
-  
-    // Iterator protocol - derefernces to the current index
-    __target__ CppSimdContext& operator++();
-    __target__ Shape operator*() const;
-  
-    // Thread's iteration space
-    const Context& ctx;
-    // Current position
-    size_t idx;
+  // // Target-only class for instruction-level iteration over the space
+  template<class AT, size_t VL = VVL>
+  struct VectorView {
+    typedef AT ArrayT;
+    typedef typename AT::ElemType ElemType;
+    typedef typename AT::WrapType WrapType;
+
+    WrapType zero;
+    WrapType operator[](size_t i);
   };
   
-  // __target__ bool operator!=(const CppSimdContext& a, const CppSimdContext& b);
-  // __target__ bool operator==(const CppSimdContext& a, const CppSimdContext& b);
-
-  // Kernel Launcher - it knows the types it will be called with, but
-  // you don't have to, as long as you use the factory function below
-  template <size_t ND, class... FuncArgs>
-  struct CppLauncher {
-
-    typedef array<size_t, ND> ShapeT;  
-    typedef void (*FuncT)(FuncArgs...);
-
-    const ShapeT& shape;
-    const FuncT& func;
-  
-    // Prepare to launch
-    CppLauncher(const ShapeT& s, const FuncT& f);
-    // Launch!
-    void operator()(FuncArgs... args);
-  };
-
-  // Factory function for global iteration contexts
-  template <size_t ND, size_t VL>
-  __target__ CppContext<ND, VL> MkContext(const array<size_t, ND>& shape);
-
-  // Factory function for Launchers.
-  //
-  // Uses argument dependent lookup and function traits to construct
-  // the right type of launcher
-  template<class FuncT, class ShapeT>
-  CppLauncher<ShapeT::size(), typename function_traits<FuncT>::args_type>
-  MkLauncher(FuncT* f, ShapeT shape);
 
   template<class Impl>
   struct Kernel {
@@ -161,17 +126,21 @@ namespace target {
 	template<class... Args>
 	struct ArgTypes {
 	  Index extent;
-	  //dim3 nBlocks, blockShape;
 	  CppContext<ND,VL>* indexSpace;
 	  __targetBoth__ ArgTypes(const Index& shape);
-	  void Launch(Args&&... args);
-	  static const size_t nDim = ND;
-	  static const size_t vecLen = VL;
+	  void operator()(Args... args);
+	  constexpr size_t Dims() const {
+	    return ND;
+	  }
+	  constexpr size_t VecLen() const {
+	    return VL;
+	  }
+	  
 	};
       };
     };
   };
-
+  
 }
 
 #endif
