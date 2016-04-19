@@ -38,7 +38,7 @@ namespace target {
     __target__ CudaThreadContext<ND, VL> end() const;
 
     // Describe the index space the global iteration is over
-    const size_t start, finish;
+    size_t start, finish;
     const Shape extent;
     const SpaceIndexer<ND> indexer;
   };

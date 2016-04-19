@@ -7,10 +7,12 @@ namespace target {
 
   template<size_t ND, size_t VL>
   __target__ CudaContext<ND,VL>::CudaContext(const Shape& n) : extent(n),
-							       indexer(n),
-    							       start(VL * (blockIdx.x * blockDim.x + threadIdx.x)),
-							       // smaller of start+VL and indexer.size
-    							       finish(((start + VL) < indexer.size) ? (start + VL) : indexer.size) {
+							       indexer(n) {
+    start = VL * (blockIdx.x * blockDim.x + threadIdx.x);
+    // smaller of start+VL and indexer.size
+    finish = ((start + VL) < indexer.size) ?
+      (start + VL) :
+      indexer.size;
   }
 
   template<size_t ND, size_t VL>

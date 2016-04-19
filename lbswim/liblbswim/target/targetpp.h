@@ -27,6 +27,14 @@ namespace target {
 
 }
 
+#ifdef TARGET_MODE_CUDA
+#define TARGET_BACKEND_CUDA
+#endif
+#if defined(TARGET_MODE_OPENMP) || defined(TARGET_MODE_VANILLA)
+#define TARGET_BACKEND_CPP
+#endif
+
+
 #if defined(TARGET_MODE_CUDA)
 // CUDA backend
 #include "./cuda_backend.hpp"
@@ -34,17 +42,17 @@ namespace target {
 #define TARGET_TLP_PRAGMA
 #define TARGET_ILP_PRAGMA
 
-#elif defined(TARGET_MODE_OPENMP)
-// OpenMP C++ backend
+#elif defined(TARGET_BACKEND_CPP)
+// C++ backend
 #include "./cpp_backend.hpp"
+
+#if defined(TARGET_MODE_OPENMP)
 #define TARGET_TLP_PRAGMA   _Pragma("omp parallel for")
 #define TARGET_ILP_PRAGMA _Pragma("omp simd")
-
-#elif defined(TARGET_MODE_VANILLA)
-// Vanilla C++ backend
-#include "./cpp_backend.hpp"
+#else
 #define TARGET_TLP_PRAGMA
 #define TARGET_ILP_PRAGMA
+#endif
 
 #else
 #error "TARGET_MODE not defined!"
@@ -64,6 +72,7 @@ namespace target {
 #define FOR_TLP(threadSpace)						\
   TARGET_TLP_PRAGMA							\
   for (auto threadSpace = indexSpace->begin(); threadSpace < indexSpace->end(); ++threadSpace)
+
 #define FOR_ILP(index, threadSpace)			\
   TARGET_ILP_PRAGMA					\
   for (size_t index = 0; index < VecLen(); ++index)
