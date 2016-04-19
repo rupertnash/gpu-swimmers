@@ -102,7 +102,7 @@ namespace target {
   template<size_t ND, size_t VL>
   template <class ArrayT>
   __target__ VectorView<ArrayT, VL> CppThreadContext<ND, VL>::GetCurrentElements(ArrayT* arr) {
-    static_assert(arr->MaxVVL() >= VL, "Array not guaranteed to work with this vector length");
+    static_assert(ArrayT::MaxVVL() >= VL, "Array not guaranteed to work with this vector length");
     assert(ijk % VL == 0);
     
     VectorView<ArrayT, VL> ans;
