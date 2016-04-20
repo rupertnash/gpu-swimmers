@@ -16,7 +16,7 @@ namespace target {
   struct VectorView;
   
   // Target-only class that controls the iteration over an index space
-  template<size_t ND = 1, size_t VL = VVL>
+  template<size_t ND = 1, size_t VL = TARGET_DEFAULT_VVL>
   struct CppContext {
   
     typedef array<size_t, ND> Shape;
@@ -34,14 +34,14 @@ namespace target {
     const Shape extent;
     const SpaceIndexer<ND> indexer;
   };
-  template<size_t ND = 1, size_t VL = VVL>
+  template<size_t ND = 1, size_t VL = TARGET_DEFAULT_VVL>
   bool operator==(const CppContext<ND, VL>& a, const CppContext<ND, VL>& b);
   
   // Target-only class that controls thread-level iteration over the
   // index space.
   
   // OpenMP requires that it be a random access iterator.
-  template<size_t ND = 1, size_t VL = VVL>
+  template<size_t ND = 1, size_t VL = TARGET_DEFAULT_VVL>
   struct CppThreadContext /*: public std::iterator<std::random_access_iterator_tag,
 						 const array<size_t, ND>,
 						 int>*/
@@ -88,24 +88,24 @@ namespace target {
     size_t ijk;
   };
   
-  template<size_t ND = 1, size_t VL = VVL>
+  template<size_t ND = 1, size_t VL = TARGET_DEFAULT_VVL>
   bool operator==(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b);
-  template<size_t ND = 1, size_t VL = VVL>
+  template<size_t ND = 1, size_t VL = TARGET_DEFAULT_VVL>
   bool operator!=(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b);
-  template<size_t ND = 1, size_t VL = VVL>
+  template<size_t ND = 1, size_t VL = TARGET_DEFAULT_VVL>
   bool operator<(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b);
-  template<size_t ND = 1, size_t VL = VVL>
+  template<size_t ND = 1, size_t VL = TARGET_DEFAULT_VVL>
   bool operator<=(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b);
-  template<size_t ND = 1, size_t VL = VVL>
+  template<size_t ND = 1, size_t VL = TARGET_DEFAULT_VVL>
   bool operator>(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b);
-  template<size_t ND = 1, size_t VL = VVL>
+  template<size_t ND = 1, size_t VL = TARGET_DEFAULT_VVL>
   bool operator>=(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b);
 
-  template<size_t ND = 1, size_t VL = VVL>
+  template<size_t ND = 1, size_t VL = TARGET_DEFAULT_VVL>
   std::ptrdiff_t operator-(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b);
   
   // // Target-only class for instruction-level iteration over the space
-  template<class AT, size_t VL = VVL>
+  template<class AT, size_t VL = TARGET_DEFAULT_VVL>
   struct VectorView {
     typedef AT ArrayT;
     typedef typename AT::ElemType ElemType;

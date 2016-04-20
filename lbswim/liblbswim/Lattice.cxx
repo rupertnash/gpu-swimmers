@@ -55,7 +55,7 @@ __targetConst__ double DQ_delta[DQ_d][DQ_d] = {{1.0, 0.0, 0.0},
 					       {0.0, 1.0, 0.0},
 					       {0.0, 0.0, 1.0}};
 
-TARGET_KERNEL_DECLARE(LatticeStepK, 3, VVL, const LBParams*, LDView);
+TARGET_KERNEL_DECLARE(LatticeStepK, 3, TARGET_DEFAULT_VVL, const LBParams*, LDView);
 TARGET_KERNEL_DEFINE(LatticeStepK, const LBParams* params, LDView data) {
   auto shape = data.rho->indexer.shape;
   FOR_TLP(threadCtx) {
@@ -200,7 +200,7 @@ void Lattice::Step() {
   time_step++;
 }
 
-TARGET_KERNEL_DECLARE(LatticeCalcHydroK, 3, VVL, const LBParams*, LDView);
+TARGET_KERNEL_DECLARE(LatticeCalcHydroK, 3, TARGET_DEFAULT_VVL, const LBParams*, LDView);
 TARGET_KERNEL_DEFINE(LatticeCalcHydroK, const LBParams* params, LDView data) {
   FOR_TLP(threadCtx) {
     /* dists at time = t */
@@ -239,7 +239,7 @@ void Lattice::CalcHydro() {
   target::synchronize();
 }
 
-TARGET_KERNEL_DECLARE(LatticeInitFromHydroK, 3, VVL, const LBParams*, LDView);
+TARGET_KERNEL_DECLARE(LatticeInitFromHydroK, 3, TARGET_DEFAULT_VVL, const LBParams*, LDView);
 TARGET_KERNEL_DEFINE(LatticeInitFromHydroK, const LBParams* params, LDView data) {
   FOR_TLP(threadCtx) {
     /* dists at time = t */
@@ -290,7 +290,7 @@ void Lattice::InitFromHydro() {
 }
 
 
-TARGET_KERNEL_DECLARE(LatticeZeroForceK, 3, VVL, const LBParams*, LDView);
+TARGET_KERNEL_DECLARE(LatticeZeroForceK, 3, TARGET_DEFAULT_VVL, const LBParams*, LDView);
 TARGET_KERNEL_DEFINE(LatticeZeroForceK, const LBParams* params, LDView data) {
   FOR_TLP(threadCtx) {
     auto force_v = threadCtx.GetCurrentElements(data.force);

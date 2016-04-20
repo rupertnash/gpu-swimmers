@@ -5,7 +5,7 @@
 #include "target/targetpp.h"
 #include "target/atomic.h"
 
-TARGET_KERNEL_DECLARE(InitPrngK, 1, VVL, const unsigned long long, RandList*);
+TARGET_KERNEL_DECLARE(InitPrngK, 1, TARGET_DEFAULT_VVL, const unsigned long long, RandList*);
 TARGET_KERNEL_DEFINE(InitPrngK, const unsigned long long seed,
 		     RandList* prngs) {
   FOR_TLP(thread) {
@@ -67,7 +67,7 @@ __target__ void AccumulateDeltaForce(VectorField* lat_force_ptr, const double* r
   
 }
 
-TARGET_KERNEL_DECLARE(SwimmerArrayAddForcesK, 1, VVL,
+TARGET_KERNEL_DECLARE(SwimmerArrayAddForcesK, 1, TARGET_DEFAULT_VVL,
 		      const CommonParams*, const VectorList*, const VectorList*, VectorField*);
 TARGET_KERNEL_DEFINE(SwimmerArrayAddForcesK,
 		     const CommonParams* p, const VectorList* swim_r, const VectorList* swim_n,
@@ -107,7 +107,7 @@ void SwimmerArray::AddForces(Lattice* lat) const {
     lat->data.force.Device());
   target::synchronize();
 }
-TARGET_KERNEL_DECLARE(SwimmerArrayMoveK, 1, VVL,
+TARGET_KERNEL_DECLARE(SwimmerArrayMoveK, 1, TARGET_DEFAULT_VVL,
 		      const CommonParams*,
 		      VectorList*,
 		      VectorList*,

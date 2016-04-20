@@ -24,7 +24,7 @@ namespace target {
   // the flattened one-dimensional array. This could easily be
   // extended to grid-striding which might help.
   // https://devblogs.nvidia.com/parallelforall/cuda-pro-tip-write-flexible-kernels-grid-stride-loops/
-  template<size_t ND = 1, size_t VL = VVL>
+  template<size_t ND = 1, size_t VL = TARGET_DEFAULT_VVL>
   struct CudaContext {
   
     typedef array<size_t, ND> Shape;
@@ -45,7 +45,7 @@ namespace target {
 
   // Target-only class that controls thread-level iteration over the
   // index space
-  template<size_t ND = 1, size_t VL = VVL>
+  template<size_t ND = 1, size_t VL = TARGET_DEFAULT_VVL>
   struct CudaThreadContext {
   
     typedef CudaContext<ND, VL> Parent;
@@ -81,7 +81,7 @@ namespace target {
   __target__ bool operator<(const CudaThreadContext<ND, VL>& a, const CudaThreadContext<ND, VL>& b);
 
   // Target-only class for instruction-level iteration over the space
-  template<class AT, size_t VL = VVL>
+  template<class AT, size_t VL = TARGET_DEFAULT_VVL>
   struct VectorView {
     typedef AT ArrayT;
     typedef typename AT::ElemType ElemType;

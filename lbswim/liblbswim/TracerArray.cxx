@@ -9,7 +9,7 @@ TracerArray::TracerArray(const size_t num_) :
 {
 }
 
-TARGET_KERNEL_DECLARE(TracerArrayMoveK, 1, VVL,
+TARGET_KERNEL_DECLARE(TracerArrayMoveK, 1, TARGET_DEFAULT_VVL,
 		      VectorList*,
 		      VectorList*,
 		      VectorList*,
