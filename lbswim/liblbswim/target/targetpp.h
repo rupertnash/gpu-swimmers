@@ -7,6 +7,20 @@
 #include "target.h"
 #include <utility>
 
+
+#ifdef __INTEL_COMPILER
+#include "./vector_intel.h"
+
+#else
+#ifdef __GNUC__
+#include "./vector_gnu.h"
+
+#else
+#error "Can't ID this compiler"
+#endif
+
+#endif
+
 // Backend-independent things
 namespace target {
   // typesafe malloc
@@ -51,7 +65,7 @@ namespace target {
 #define TARGET_ILP_PRAGMA _Pragma("omp simd")
 #else
 #define TARGET_TLP_PRAGMA
-#define TARGET_ILP_PRAGMA
+#define TARGET_ILP_PRAGMA TARGET_SIMD_PRAGMA
 #endif
 
 #else
@@ -71,7 +85,8 @@ namespace target {
 
 #define FOR_TLP(threadSpace)						\
   TARGET_TLP_PRAGMA							\
-  for (auto threadSpace = indexSpace->begin(); threadSpace < indexSpace->end(); ++threadSpace)
+  const auto threadSpace##_TLP_end = indexSpace->end();			\
+  for (auto threadSpace = indexSpace->begin(); threadSpace < threadSpace##_TLP_end; ++threadSpace)
 
 #define FOR_ILP(index, threadSpace)			\
   TARGET_ILP_PRAGMA					\

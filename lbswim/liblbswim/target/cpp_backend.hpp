@@ -106,7 +106,8 @@ namespace target {
     assert(ijk % VL == 0);
     
     VectorView<ArrayT, VL> ans;
-    ans.zero.data = (typename ArrayT::ElemType *)__builtin_assume_aligned(arr->data + ijk, sizeof(typename ArrayT::ElemType) * VL);
+    ans.zero.data = arr->data + ijk;
+    //(typename ArrayT::ElemType *)__builtin_assume_aligned(arr->data + ijk, sizeof(typename ArrayT::ElemType) * VL);
     ans.zero.stride = arr->element_pitch;
     return ans;
   }

@@ -129,10 +129,10 @@ namespace target {
 	  CppContext<ND,VL>* indexSpace;
 	  __targetBoth__ ArgTypes(const Index& shape);
 	  void operator()(Args... args);
-	  constexpr size_t Dims() const {
+	  constexpr static size_t Dims() {
 	    return ND;
 	  }
-	  constexpr size_t VecLen() const {
+	  constexpr static size_t VecLen() {
 	    return VL;
 	  }
 	  
