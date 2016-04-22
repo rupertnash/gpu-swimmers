@@ -29,7 +29,9 @@ elseif((TARGET_MODE STREQUAL "OPENMP") OR (TARGET_MODE STREQUAL "VANILLA"))
   
   set_source_files_properties(${TARGETDP_SOURCE_DIR}/targetDP_C.c
     PROPERTIES COMPILE_FLAGS "-x c++")
-  
+
+  add_executable(lb_test lb_test.cxx)
+  target_link_libraries(lb_test lbswim)
 else()
   message(FATAL_ERROR "Unknown TARGET_MODE = '${TARGET_MODE}'")
 endif()
