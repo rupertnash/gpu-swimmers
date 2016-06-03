@@ -89,11 +89,8 @@ namespace target {
     return ans;
   }
   
-  template<class Impl>
-  template<size_t ND>
-  template<size_t VL>
-  template<class... Args>
-  __targetBoth__ Kernel<Impl>::Dims<ND>::VecLen<VL>::ArgTypes<Args...>::ArgTypes(const Index& shape) : extent(shape) {
+  template<class Impl, size_t ND, size_t VL>
+  __targetBoth__ Kernel<Impl, ND, VL>::Kernel(const Index& shape) : extent(shape) {
     static_assert(ND > 0, "Must have at least one dimension");
     auto nElem = Product(shape);
     // Round up to the next VL
@@ -110,12 +107,10 @@ namespace target {
     kernel.Run(args...);
     delete kernel.indexSpace;
   }
-  
-  template<class Impl>
-  template<size_t ND>
-  template<size_t VL>
+
+  template<class Impl, size_t ND, size_t VL>
   template<class... Args>
-  void Kernel<Impl>::Dims<ND>::VecLen<VL>::ArgTypes<Args...>::operator()(Args... args) {
+  void Kernel<Impl,ND,VL>::operator()(Args... args) {
     TargetKernelEntry<Impl, ND, VL, Args...> <<<nBlocks, blockShape>>> (extent, args...);
   }
 

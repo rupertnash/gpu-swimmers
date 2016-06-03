@@ -116,29 +116,27 @@ namespace target {
   };
   
 
-  template<class Impl>
+  template<class Impl, size_t ND, size_t VL>
   struct Kernel {
-    template<size_t ND>
-    struct Dims {
-      typedef array<size_t, ND> Index;
-      template<size_t VL>
-      struct VecLen {
-	template<class... Args>
-	struct ArgTypes {
-	  Index extent;
-	  CppContext<ND,VL>* indexSpace;
-	  __targetBoth__ ArgTypes(const Index& shape);
-	  void operator()(Args... args);
-	  constexpr static size_t Dims() {
-	    return ND;
-	  }
-	  constexpr static size_t VecLen() {
-	    return VL;
-	  }
-	  
-	};
-      };
-    };
+    typedef Kernel<Impl, ND, VL> Base;
+    typedef array<size_t, ND> Index;
+    //typedef typename function_traits<decltype(Impl::Run)>::args_types run_args_types;
+    Index extent;
+    CppContext<ND,VL>* indexSpace;
+    __targetBoth__ Kernel(const Index& shape);
+    template <class... Args>
+    void operator()(Args... args) {
+      indexSpace = new CppContext<ND,VL>(extent);
+      static_cast<Impl*>(this)->Run(args...);
+      delete indexSpace;
+    }
+    constexpr static size_t Dims() {
+      return ND;
+    }
+    constexpr static size_t VecLen() {
+      return VL;
+    }
+    
   };
   
 }

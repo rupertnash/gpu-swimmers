@@ -130,22 +130,9 @@ namespace target {
   }
   
 
-  template<class Impl>
-  template<size_t ND>
-  template<size_t VL>
-  template<class... Args>
-  __targetBoth__ Kernel<Impl>::Dims<ND>::VecLen<VL>::ArgTypes<Args...>::ArgTypes(const Index& shape) : extent(shape) {
+  template<class Impl, size_t ND, size_t VL>
+  __targetBoth__ Kernel<Impl, ND, VL>::Kernel(const Index& shape) : extent(shape) {
     static_assert(ND > 0, "Must have at least one dimension");
-  }
-  
-  template<class Impl>
-  template<size_t ND>
-  template<size_t VL>
-  template<class... Args>
-  void Kernel<Impl>::Dims<ND>::VecLen<VL>::ArgTypes<Args...>::operator()(Args... args) {
-    indexSpace = new CppContext<ND,VL>(extent);
-    static_cast<Impl*>(this)->Run(args...);
-    delete indexSpace;
   }
 }
 #endif

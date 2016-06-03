@@ -91,30 +91,22 @@ namespace target {
     __target__ WrapType operator[](size_t i);
   };
   
-  template<class Impl>
-  struct Kernel {
-    template<size_t ND>
-    struct Dims {
-      typedef array<size_t, ND> Index;
-      template<size_t VL>
-      struct VecLen {
-	template<class... Args>
-	struct ArgTypes {
-	  Index extent;
-	  size_t nBlocks, blockShape;
-	  CudaContext<ND,VL>* indexSpace;
-	  __targetBoth__ ArgTypes(const Index& shape);
-	  void operator()(Args... args);
-	  __targetBoth__ constexpr size_t Dims() const {
-	    return ND;
-	  }
-	  __targetBoth__ constexpr size_t VecLen() const {
-	    return VL;
-	  }
-	};
-      };
-    };
-  };
+ template<class Impl, size_t ND, size_t VL>
+ struct Kernel {
+   typedef array<size_t, ND> Index;
+   Index extent;
+   size_t nBlocks, blockShape;
+   CudaContext<ND,VL>* indexSpace;
+   __targetBoth__ Kernel(const Index& shape);
+   template<class... Args>
+   void operator()(Args... args);
+   __targetBoth__ constexpr size_t Dims() const {
+     return ND;
+   }
+   __targetBoth__ constexpr size_t VecLen() const {
+     return VL;
+   }
+ };
 
 }
 #endif

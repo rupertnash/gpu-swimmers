@@ -76,16 +76,16 @@ namespace target {
 #include "./targetpp.hpp"
 
 #define TARGET_KERNEL_DECLARE(name, nd, vl, ...)			\
-  struct name : public ::target::Kernel<name>::Dims<nd>::VecLen<vl>::ArgTypes<__VA_ARGS__> { \
-    using ::target::Kernel<name>::Dims<nd>::VecLen<vl>::ArgTypes<__VA_ARGS__>::ArgTypes; \
+  struct name : public ::target::Kernel<name, nd, vl> {	\
+    using ::target::Kernel<name, nd, vl>::Kernel;	\
     __target__ void Run(__VA_ARGS__);					\
   }
 #define TARGET_KERNEL_DEFINE(name, ...)		\
   __target__ void name::Run(__VA_ARGS__)
-
+  
 #define FOR_TLP(threadSpace)						\
-  TARGET_TLP_PRAGMA							\
   const auto threadSpace##_TLP_end = indexSpace->end();			\
+  TARGET_TLP_PRAGMA							\
   for (auto threadSpace = indexSpace->begin(); threadSpace < threadSpace##_TLP_end; ++threadSpace)
 
 #define FOR_ILP(index, threadSpace)			\
