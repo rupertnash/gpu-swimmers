@@ -18,6 +18,8 @@ add_subdirectory( liblbswim )
 
 include(UseCython)
 find_package(NumPy)
+set(NUMPY_INCLUDE_DIR ${NUMPY_INCLUDE_DIRS}
+  CACHE string "Directory containing numpy.h")
 
 # Get the list of .pyx files
 FILE(GLOB PYX_SOURCES ${CMAKE_CURRENT_SOURCE_DIR} *.pyx)
@@ -25,7 +27,7 @@ FILE(GLOB PYX_SOURCES ${CMAKE_CURRENT_SOURCE_DIR} *.pyx)
 set_source_files_properties(${PYX_SOURCES}
   PROPERTIES CYTHON_IS_CXX TRUE)
 
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/liblbswim ${NUMPY_INCLUDE_DIRS} ${TARGETDP_SOURCE_DIR})
+INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/liblbswim ${NUMPY_INCLUDE_DIR} ${TARGETDP_SOURCE_DIR})
 
 foreach(basename Array Fields Lists lb swimmers tracers)
   cython_add_module(${basename} ${basename}.pyx)

@@ -26,6 +26,7 @@ elseif((TARGET_MODE STREQUAL "OPENMP") OR (TARGET_MODE STREQUAL "VANILLA"))
     Lattice.cxx  SwimmerArray.cxx TracerArray.cxx python_template_instantiations.cxx
     target/rand_cpp.cxx ${TARGETDP_SOURCE_DIR}/targetDP_C.c
     )
+  target_link_libraries(lbswim ${OpenMP_CXX_FLAGS})
   
   set_source_files_properties(${TARGETDP_SOURCE_DIR}/targetDP_C.c
     PROPERTIES COMPILE_FLAGS "-x c++")
