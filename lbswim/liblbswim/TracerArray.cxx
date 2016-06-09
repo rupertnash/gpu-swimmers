@@ -23,7 +23,7 @@ TARGET_KERNEL_DEFINE(TracerArrayMoveK, VectorList* part_r,
     auto part_s_vec = thread.GetCurrentElements(part_s);
     auto part_v_vec = thread.GetCurrentElements(part_v);
     
-    FOR_ILP(iPart, thread) {
+    FOR_ILP(iPart) {
       /* Updates the positions using:
        *     Rdot = v(R) 
        * where v(R) is the interpolated velocity at the position of the

@@ -89,6 +89,8 @@ namespace target {
 
     WrapType zero;
     __target__ WrapType operator[](size_t i);
+    __target__ ElemType& operator()(size_t i, size_t d);
+    __target__ const ElemType& operator()(size_t i, size_t d) const;
   };
   
  template<class Impl, size_t ND, size_t VL>

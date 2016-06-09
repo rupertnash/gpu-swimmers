@@ -155,39 +155,6 @@ struct NdArray
     return raw_data != nullptr;
   }
   
-  // struct iterator : public std::iterator<std::bidirectional_iterator_tag, WrapType> {
-  //   NdArray& container;
-  //   size_t ijk;
-  //   iterator(NdArray& cont, const ShapeType& startPos) : container(cont), ijk(cont.indexer(startPos))
-  //   {
-  //   }
-
-  //   WrapType operator *()
-  //   {
-  //     WrapType ans;
-  //     return Get<T,ND,nElem>(container, ijk);
-  //   }
-    
-  //   bool operator !=(const iterator& other)const
-  //   {
-  //     if (container != other.container)
-  // 	return true;
-  //     if (ijk != other.ijk)
-  // 	return true;
-  //     return false;
-  //   }
-    
-  //   iterator& operator ++()
-  //   {
-  //     ++ijk;
-  //     return *this;
-  //   }
-  //   iterator& operator --()
-  //   {
-  //     --ijk;
-  //     return *this;
-  //   }
-  // };
   __targetBoth__ constexpr static size_t nElems() {
     return nElem;
   }
@@ -312,13 +279,24 @@ struct NdArray
     return ans;
   }
   
-  // iterator begin() {
-  //   ShapeType zero = {};
-  //   return iterator(*this, zero);
-  // }
-  // iterator end() {
-  //   return iterator(*this, indexer.shape);
-  // }
+  __targetBoth__ ElemType& operator()(const size_t i, const size_t d) {
+    static_assert(nDims() == 1, "Only valid for 1D arrays");
+    return data[i*indexer.strides[0] + element_pitch*d];
+  }
+  __targetBoth__ const ElemType& operator()(const size_t i, const size_t d) const {
+    static_assert(nDims() == 1, "Only valid for 1D arrays");
+    return data[i*indexer.strides[0] + element_pitch*d];
+  }
+
+  __targetBoth__ ElemType& operator()(const size_t i, const size_t j, const size_t d) {
+    static_assert(nDims() == 2, "Only valid for 2D arrays");
+    return data[i * indexer.strides[0] + j * indexer.strides[1] + element_pitch*d];
+  }
+  __targetBoth__ const ElemType& operator()(const size_t i, const size_t j, const size_t d) const {
+    static_assert(nDims() == 2, "Only valid for 2D arrays");
+    return data[i * indexer.strides[0] + j * indexer.strides[1] + element_pitch*d];
+  }
+  
   __targetBoth__ bool operator !=(const NdArray& other) {
     return data != other.data;
   }

@@ -59,11 +59,12 @@ TARGET_KERNEL_DECLARE(LatticeStepK, 3, TARGET_DEFAULT_VVL, const LBParams*, LDVi
 TARGET_KERNEL_DEFINE(LatticeStepK, const LBParams* params, LDView data) {
   auto shape = data.rho->indexer.shape;
   FOR_TLP(threadCtx) {
-    auto fOld = threadCtx.GetCurrentElements(data.fOld);
-    auto force = threadCtx.GetCurrentElements(data.force);
-    
-    FOR_ILP(siteIdx, threadCtx) {
-            
+    const auto fOld = threadCtx.GetCurrentElements(data.fOld);
+    const auto force = threadCtx.GetCurrentElements(data.force);
+    typedef NdArray<double, 1, DQ_q> DistList;
+    DistList fPostCollision(VecLen());
+
+    FOR_ILP(i) {
       double mode[DQ_q];
       /* convenience vars */
       double S[DQ_d][DQ_d];
@@ -75,15 +76,12 @@ TARGET_KERNEL_DEFINE(LatticeStepK, const LBParams* params, LDView data) {
       const double omega_s = 1.0 / (tau_s + 0.5);
       const double omega_b = 1.0 / (tau_b + 0.5);
       
-      /* Post collision dists */
-      double fPostCollision[DQ_q];
-      
       /* compute the modes */
       for (size_t m=0; m<DQ_q; m++) {
-  	mode[m] = 0.;
-  	for (size_t p=0; p<DQ_q; p++) {
-  	  mode[m] += fOld[siteIdx][p] * params->mm[m][p];
-  	}
+	mode[m] = 0.;
+	for (size_t p=0; p<DQ_q; p++) {
+	  mode[m] += fOld(i, p) * params->mm[m][p];
+	}
       }
       
       /* Work out the site fluid velocity
@@ -95,10 +93,10 @@ TARGET_KERNEL_DEFINE(LatticeStepK, const LBParams* params, LDView data) {
       usq = 0.;
       uDOTf = 0.;
       for (size_t a=0; a<DQ_d; a++) {
-  	u[a] = (mode[DQ_mom(a)] + 0.5*force[siteIdx][a]) / mode[DQ_rho];
-  	mode[DQ_mom(a)] += force[siteIdx][a];
-  	usq += u[a]*u[a];
-  	uDOTf += u[a]*force[siteIdx][a];
+	u[a] = (mode[DQ_mom(a)] + 0.5*force(i, a)) / mode[DQ_rho];
+	mode[DQ_mom(a)] += force(i, a);
+	usq += u[a]*u[a];
+	uDOTf += u[a]*force(i, a);
       }
       
       /* For unequal relax trace & traceless part at different rates.
@@ -120,11 +118,11 @@ TARGET_KERNEL_DEFINE(LatticeStepK, const LBParams* params, LDView data) {
       /* Form the trace part */
       TrS = 0.;
       for (size_t a=0; a<DQ_d; a++) {
-  	TrS += S[a][a];
+	TrS += S[a][a];
       }
       /* And the traceless part */
       for (size_t a=0; a<DQ_d; a++) {
-  	S[a][a] -= TrS/DQ_d;
+	S[a][a] -= TrS/DQ_d;
       }
       
       /* relax the trace */
@@ -134,15 +132,15 @@ TARGET_KERNEL_DEFINE(LatticeStepK, const LBParams* params, LDView data) {
       
       /* and the traceless part */
       for (size_t a=0; a<DQ_d; a++) {
-  	for (size_t b=0; b<DQ_d; b++) {
-  	  S[a][b] -= omega_s*(S[a][b] - 
-  			      mode[DQ_rho]*(u[a]*u[b] -usq*DQ_delta[a][b]));
+	for (size_t b=0; b<DQ_d; b++) {
+	  S[a][b] -= omega_s*(S[a][b] - 
+			      mode[DQ_rho]*(u[a]*u[b] -usq*DQ_delta[a][b]));
 	  
-  	  /* including traceless force */
-  	  S[a][b] += 2.*omega_s*tau_s * (u[a]*force[siteIdx][b] + force[siteIdx][a]*u[b] - 2. * uDOTf * DQ_delta[a][b]);
-  	}
-  	/* add the trace back on */
-  	S[a][a] += TrS / DQ_d;
+	  /* including traceless force */
+	  S[a][b] += 2.*omega_s*tau_s * (u[a]*force(i, b) + force(i, a)*u[b] - 2. * uDOTf * DQ_delta[a][b]);
+	}
+	/* add the trace back on */
+	S[a][a] += TrS / DQ_d;
       }
       
       /* copy S back into modes[] */
@@ -164,12 +162,15 @@ TARGET_KERNEL_DEFINE(LatticeStepK, const LBParams* params, LDView data) {
     
       /* project back to the velocity basis */
       for (size_t p=0; p<DQ_q; p++) {
-  	fPostCollision[p] = 0.;
-  	for (size_t m=0; m<DQ_q; m++) {
-  	  fPostCollision[p] += mode[m] * params->mmi[p][m];
-  	}
+	fPostCollision(i, p) = 0.;
+	for (size_t m=0; m<DQ_q; m++) {
+	  fPostCollision(i, p) += mode[m] * params->mmi[p][m];
+	}
       }
-      
+    }
+
+    
+    FOR_ILP(siteIdx) {
       /* Stream */
       const Shape myIdx = threadCtx.GetNdIndex(siteIdx);
       for (size_t p=0; p<DQ_q; p++) {
@@ -179,7 +180,7 @@ TARGET_KERNEL_DEFINE(LatticeStepK, const LBParams* params, LDView data) {
   	  /* This does the PBC */
   	  destIdx[a] = (myIdx[a] + cp[a] + shape[a]) % shape[a];
   	}
-  	(*data.fNew)[destIdx][p] = fPostCollision[p];
+  	(*data.fNew)[destIdx][p] = fPostCollision[p][siteIdx];
       }
     
     }
@@ -208,7 +209,7 @@ TARGET_KERNEL_DEFINE(LatticeCalcHydroK, const LBParams* params, LDView data) {
     auto force = threadCtx.GetCurrentElements(data.force);
     auto u = threadCtx.GetCurrentElements(data.u);
     auto rho = threadCtx.GetCurrentElements(data.rho);
-    FOR_ILP(siteIdx, threadCtx) {
+    FOR_ILP(siteIdx) {
       /* Indices for loops over dists/modes */
       size_t m, p;
       double mode[DQ_q];
@@ -247,7 +248,7 @@ TARGET_KERNEL_DEFINE(LatticeInitFromHydroK, const LBParams* params, LDView data)
     auto u = threadCtx.GetCurrentElements(data.u);
     auto rho = threadCtx.GetCurrentElements(data.rho);
 
-    FOR_ILP(index, threadCtx) {
+    FOR_ILP(index) {
       /* Create the modes, all zeroed out */
       double mode[DQ_q];
       for (size_t m = 0; m < DQ_q; m++)
@@ -295,7 +296,7 @@ TARGET_KERNEL_DEFINE(LatticeZeroForceK, const LBParams* params, LDView data) {
   FOR_TLP(threadCtx) {
     auto force_v = threadCtx.GetCurrentElements(data.force);
     for (auto a = 0; a <DQ_d; ++a) {
-      FOR_ILP(i, threadCtx) {
+      FOR_ILP(i) {
 	force_v[i][a] = 0;
       }
     }

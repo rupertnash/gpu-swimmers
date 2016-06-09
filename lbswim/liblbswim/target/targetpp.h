@@ -63,6 +63,7 @@ namespace target {
 #if defined(TARGET_MODE_OPENMP)
 #define TARGET_TLP_PRAGMA   _Pragma("omp parallel for")
 #define TARGET_ILP_PRAGMA _Pragma("omp simd")
+
 #else
 #define TARGET_TLP_PRAGMA
 #define TARGET_ILP_PRAGMA TARGET_SIMD_PRAGMA
@@ -88,7 +89,7 @@ namespace target {
   TARGET_TLP_PRAGMA							\
   for (auto threadSpace = indexSpace->begin(); threadSpace < threadSpace##_TLP_end; ++threadSpace)
 
-#define FOR_ILP(index, threadSpace)			\
+#define FOR_ILP(index)					\
   TARGET_ILP_PRAGMA					\
   for (size_t index = 0; index < VecLen(); ++index)
 

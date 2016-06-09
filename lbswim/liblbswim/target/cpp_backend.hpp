@@ -116,11 +116,22 @@ namespace target {
   auto CppThreadContext<ND, VL>::GetNdIndex(size_t i) const -> Shape {
     return ctx.indexer.oneToN(ijk + i);
   }
+  
   template<class AT, size_t VL>
   auto VectorView<AT, VL>::operator[](size_t i) -> WrapType {
     WrapType ans = zero;
     ans.data += i;
     return ans;
+  }
+  
+  template<class AT, size_t VL>
+  auto VectorView<AT, VL>::operator()(size_t i, size_t d) -> ElemType& {
+    return zero.data[i + d * zero.stride];
+  }
+  
+  template<class AT, size_t VL>
+  auto VectorView<AT, VL>::operator()(size_t i, size_t d) const -> const ElemType& {
+    return zero.data[i + d * zero.stride];
   }
   
   // Factory function for global iteration context

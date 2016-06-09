@@ -113,6 +113,9 @@ namespace target {
 
     WrapType zero;
     WrapType operator[](size_t i);
+    ElemType& operator()(size_t i, size_t d);
+    const ElemType& operator()(size_t i, size_t d) const;
+
   };
   
 
@@ -120,6 +123,10 @@ namespace target {
   struct Kernel {
     typedef Kernel<Impl, ND, VL> Base;
     typedef array<size_t, ND> Index;
+    
+    template<class ArrayT>
+    using View = target::VectorView<ArrayT, VL>;
+    
     //typedef typename function_traits<decltype(Impl::Run)>::args_types run_args_types;
     Index extent;
     CppContext<ND,VL>* indexSpace;

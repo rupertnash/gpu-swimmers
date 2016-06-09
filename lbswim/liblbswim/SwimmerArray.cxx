@@ -10,7 +10,7 @@ TARGET_KERNEL_DEFINE(InitPrngK, const unsigned long long seed,
 		     RandList* prngs) {
   FOR_TLP(thread) {
     auto prng_vec = thread.GetCurrentElements(prngs);
-    FOR_ILP(i, thread) {
+    FOR_ILP(i) {
       target::rand::init(seed, thread.GetNdIndex(i)[0], &prng_vec[i][0]);
     }
   }
@@ -75,7 +75,7 @@ TARGET_KERNEL_DEFINE(SwimmerArrayAddForcesK,
   FOR_TLP(thread) {
     auto swim_r_vec = thread.GetCurrentElements(swim_r);
     auto swim_n_vec = thread.GetCurrentElements(swim_n);
-    FOR_ILP(iSwim, thread) {  
+    FOR_ILP(iSwim) {  
       size_t a;
       /* tail end */
       /* only force is the propulsion */
@@ -132,7 +132,7 @@ TARGET_KERNEL_DEFINE(SwimmerArrayMoveK, const CommonParams* common,
     auto swim_n_vec = threadCtx.GetCurrentElements(swim_n);
     auto swim_prng_vec = threadCtx.GetCurrentElements(swim_prng);
     
-    FOR_ILP(iSwim, threadCtx) {
+    FOR_ILP(iSwim) {
   
       auto size = lat_u->Shape();
 

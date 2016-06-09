@@ -43,7 +43,7 @@ TARGET_KERNEL_DEFINE(SetupK, LDView data) {
     auto rho = thr.GetCurrentElements(data.rho);
     auto u = thr.GetCurrentElements(data.u);
     auto force = thr.GetCurrentElements(data.force);
-    FOR_ILP(i, thr) {
+    FOR_ILP(i) {
       rho[i][0] = 1.0;
       for (size_t d=0; d<3; d++) {
 	u[i][d] = 0.0;

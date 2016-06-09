@@ -89,6 +89,16 @@ namespace target {
     return ans;
   }
   
+  template<class AT, size_t VL>
+  __target__ auto VectorView<AT, VL>::operator()(size_t i, size_t d) -> ElemType& {
+    return zero.data[i + d * zero.stride];
+  }
+  
+  template<class AT, size_t VL>
+  __target__ auto VectorView<AT, VL>::operator()(size_t i, size_t d) const -> const ElemType& {
+    return zero.data[i + d * zero.stride];
+  }
+  
   template<class Impl, size_t ND, size_t VL>
   __targetBoth__ Kernel<Impl, ND, VL>::Kernel(const Index& shape) : extent(shape) {
     static_assert(ND > 0, "Must have at least one dimension");
