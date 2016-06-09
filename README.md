@@ -10,11 +10,13 @@ This is based on https://github.com/rupertnash/subgrid
 * Arrays of point-like tracer particles (that do not affect the fluid)
 
 ## Requirements:
-* CUDA
 * CMake
 * Python
 * NumPy
 * Cython
+* TargetDP https://ccpforge.cse.rl.ac.uk/gf/project/ludwig/scmsvn/?action=browse&path=%2Ftrunk%2FtargetDP%2F
+* CUDA to use a GPU
+* OpenMP to use multiple cores
 
 ## Building
 Done with CMake
@@ -27,7 +29,7 @@ make install
 ```
 
 ## Structure
-The core LB and swimmers are implemented in CUDA C++ in lbswim/liblbswim. This is compiled to a shared library `liblbswim.so`. All the classes have both CPU/host and GPU/device copies of their data. It is up to the user to update things, but the library makes this fairly simple by offering `D2H()` (device to host) and `H2D()` (host to device) methods to move data.
+The core LB and swimmers are implemented in C++ in lbswim/liblbswim. This is compiled to a shared library `liblbswim.so`. All the classes have both CPU/host and GPU/device copies of their data. It is up to the user to update things, but the library makes this fairly simple by offering `D2H()` (device to host) and `H2D()` (host to device) methods to move data.
 
 This is then wrapped by Cython and made available in Python as the package `lbswim`.
 
