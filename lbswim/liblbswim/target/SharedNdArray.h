@@ -1,10 +1,11 @@
 // -*- mode: C++; -*-
-#ifndef SHAREDNDARRAY_H
-#define SHAREDNDARRAY_H
+#ifndef TARGET_SHAREDNDARRAY_H
+#define TARGET_SHAREDNDARRAY_H
 
 #include "NdArray.h"
 #include "SharedItem.h"
 
+namespace target {
 template<typename T, size_t ND, size_t nElem>
 class SharedItem< NdArray<T,ND,nElem> >
 {
@@ -45,5 +46,5 @@ class SharedItem< NdArray<T,ND,nElem> >
   void D2H();
 
 };
-
+}
 #endif

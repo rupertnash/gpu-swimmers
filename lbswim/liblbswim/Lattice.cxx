@@ -61,7 +61,7 @@ TARGET_KERNEL_DEFINE(LatticeStepK, const LBParams* params, LDView data) {
   FOR_TLP(threadCtx) {
     const auto fOld = threadCtx.GetCurrentElements(data.fOld);
     const auto force = threadCtx.GetCurrentElements(data.force);
-    typedef NdArray<double, 1, DQ_q> DistList;
+    typedef target::NdArray<double, 1, DQ_q> DistList;
     DistList fPostCollision(VecLen());
 
     FOR_ILP(i) {

@@ -3,7 +3,7 @@
 #define TRACER_ARRAY_H
 
 #include "Lists.h"
-#include "SharedNdArray.h"
+#include "target/SharedNdArray.h"
 
 class Lattice;
 
@@ -12,9 +12,9 @@ struct TracerArray {
   TracerArray(const size_t n);
   void Move(Lattice* lat);
   size_t num;
-  SharedItem<VectorList> r;
-  SharedItem<VectorList> s;
-  SharedItem<VectorList> v;
+  target::SharedItem<VectorList> r;
+  target::SharedItem<VectorList> s;
+  target::SharedItem<VectorList> v;
 };
 
 

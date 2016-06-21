@@ -1,8 +1,8 @@
 // -*- mode: C++; -*-
-#ifndef ND_H
-#define ND_H
+#ifndef TARGET_ND_H
+#define TARGET_ND_H
 
-#include "target/func_attr.h"
+#include "func_attr.h"
 
 #include "array.h"
 /* #include <memory> */
@@ -10,7 +10,8 @@
 /* #include <numeric> */
 /* #include <iostream> */
 /* #include <assert.h> */
-
+namespace target {
+  
 template <size_t ND>
 struct AoSSpaceLayoutPolicy
 {
@@ -107,5 +108,5 @@ struct SpaceIndexer
 // Define static member
 template<size_t ND>
 const size_t SpaceIndexer<ND>::ndims = ND;
-
+}
 #endif // ND_H

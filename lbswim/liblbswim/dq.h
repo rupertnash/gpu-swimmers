@@ -3,8 +3,8 @@
 #define DQ_H
 
 #include "d3q15.h"
-#include "array.h"
+#include "target/array.h"
 
-typedef array<size_t, DQ_d> Shape;
+typedef target::array<size_t, DQ_d> Shape;
 
 #endif

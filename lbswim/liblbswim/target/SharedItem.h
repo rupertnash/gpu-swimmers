@@ -1,7 +1,8 @@
 // -*- mode: C++; -*-
-#ifndef SHAREDITEM_H
-#define SHAREDITEM_H
+#ifndef TARGET_SHAREDITEM_H
+#define TARGET_SHAREDITEM_H
 
+namespace target {
 template<typename T>
 class SharedItem {
   T* host;
@@ -30,5 +31,5 @@ public:
   const T* Device() const;
   
 };
-
+}
 #endif

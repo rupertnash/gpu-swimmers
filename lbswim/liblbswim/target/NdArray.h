@@ -7,9 +7,9 @@
 #ifndef NDARRAY_H
 #define NDARRAY_H
 
-#include "target/func_attr.h"
-
+#include "func_attr.h"
 #include "array.h"
+
 #include <memory>
 #include <algorithm>
 #include <numeric>
@@ -37,6 +37,7 @@ namespace std {
 }
 #endif
 
+namespace target {
 __targetBoth__ inline void* Malloc(size_t size) {
 #ifdef TARGET_DEVICE_CODE
   char* ans;
@@ -301,5 +302,5 @@ struct NdArray
     return data != other.data;
   }
 };
-
+}
 #endif

@@ -1,11 +1,12 @@
 // -*- mode: C++; -*-
-#ifndef array_H
-#define array_H
+#ifndef TARGET_ARRAY_H
+#define TARGET_ARRAY_H
+
 #include <cstdlib>
-#include "target/func_attr.h"
+#include "func_attr.h"
 
 /* Minimal CUDA-compatible std::array replacement */
-
+namespace target {
 template <typename T, size_t N>
 class array
 {
@@ -56,5 +57,6 @@ __targetBoth__ bool operator==(const array<T,N>& a, const array<T,N>& b) {
 template <typename T, size_t N>
 __targetBoth__ bool operator!=(const array<T,N>& a, const array<T,N>& b) {
   return !(a == b);
+}
 }
 #endif

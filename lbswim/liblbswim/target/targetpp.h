@@ -2,8 +2,8 @@
 #ifndef TARGET_TARGETPP_H
 #define TARGET_TARGETPP_H
 
-#include "./func_attr.h"
-#include "../array.h"
+#include "func_attr.h"
+#include "array.h"
 #include "target.h"
 #include <utility>
 

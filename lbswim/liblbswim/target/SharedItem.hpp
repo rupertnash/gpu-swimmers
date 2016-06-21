@@ -1,10 +1,11 @@
 // -*- mode: C++; -*-
-#ifndef SHAREDITEM_HPP
-#define SHAREDITEM_HPP
+#ifndef TARGET_SHAREDITEM_HPP
+#define TARGET_SHAREDITEM_HPP
 
 #include "SharedItem.h"
-#include "target/targetpp.h"
+#include "targetpp.h"
 
+namespace target {
 template<typename T>
 void SharedItem<T>::DevAlloc() {
   target::malloc(device);
@@ -45,5 +46,5 @@ template <typename T>
 const T* SharedItem<T>::Device() const {
   return device;
 }
-
+}
 #endif // SHAREDITEM_HPP

@@ -5,7 +5,9 @@
 
 TracerArray::TracerArray(const size_t num_) : 
   num(num_),
-  r(array<size_t,1>{num_}), s(array<size_t,1>{num_}), v(array<size_t,1>{num_})
+  r(target::array<size_t,1>{num_}),
+  s(target::array<size_t,1>{num_}),
+  v(target::array<size_t,1>{num_})
 {
 }
 

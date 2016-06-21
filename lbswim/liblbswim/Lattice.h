@@ -5,9 +5,9 @@
 #include "dq.h"
 #include "LBParams.h"
 
-#include "NdArray.h"
-#include "SharedItem.h"
-#include "SharedNdArray.h"
+#include "target/NdArray.h"
+#include "target/SharedItem.h"
+#include "target/SharedNdArray.h"
 
 #include "Fields.h"
 
@@ -25,11 +25,11 @@ struct LatticeData {
   LDView Host();
   LDView Device();
 
-  SharedItem<ScalarField> rho;
-  SharedItem<VectorField> u;
-  SharedItem<VectorField> force;
-  SharedItem<DistField> fOld;
-  SharedItem<DistField> fNew;
+  target::SharedItem<ScalarField> rho;
+  target::SharedItem<VectorField> u;
+  target::SharedItem<VectorField> force;
+  target::SharedItem<DistField> fOld;
+  target::SharedItem<DistField> fNew;
 };
 
 
@@ -41,7 +41,7 @@ struct Lattice {
   void InitFromHydro();
   void ZeroForce();
 
-  SharedItem<LBParams> params;
+  target::SharedItem<LBParams> params;
   Shape shape;
   LatticeData data;
   /* Current timestep */

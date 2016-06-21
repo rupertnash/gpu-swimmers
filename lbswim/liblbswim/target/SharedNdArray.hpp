@@ -1,11 +1,12 @@
 // -*- mode: C++; -*-
-#ifndef SHAREDNDARRAY_HPP
-#define SHAREDNDARRAY_HPP
+#ifndef TARGET_SHAREDNDARRAY_HPP
+#define TARGET_SHAREDNDARRAY_HPP
 
 #include "SharedNdArray.h"
+#include "targetpp.h"
 
-#include "target/targetpp.h"
-
+namespace target {
+  
 template<typename T, size_t ND, size_t nElem>
 void SharedItem< NdArray<T, ND, nElem> >::Reset() {
   host = new SharedType();
@@ -146,5 +147,5 @@ void SharedItem< NdArray<T, ND, nElem> >::D2H() {
 		  device_data,
 		  dataSize);
 }
-
+}
 #endif // SHAREDNDARRAY_HPP

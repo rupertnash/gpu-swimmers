@@ -3,8 +3,8 @@
 #define TARGET_CPP_BACKEND_H
 
 #include "./func_attr.h"
-#include "../array.h"
-#include "../Nd.h"
+#include "./array.h"
+#include "./Nd.h"
 #include "./function_traits.h"
 
 namespace target {

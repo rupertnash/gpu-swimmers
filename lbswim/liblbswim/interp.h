@@ -5,7 +5,7 @@
 #include <cmath>
 
 #include "Lattice.h"
-#include "array.h"
+#include "target/array.h"
 
 template<typename Float>
 __target__ Float peskin_delta(Float x) {
@@ -29,7 +29,7 @@ __target__ Float peskin_delta(Float x) {
 }
 
 template<typename Indexable>
-__target__ array<double,DQ_d> InterpVelocity(const VectorField* lat_u_ptr,
+__target__ target::array<double,DQ_d> InterpVelocity(const VectorField* lat_u_ptr,
 			       const Indexable& r) {
   auto& lat_u = *lat_u_ptr;
   auto n = lat_u.indexer.shape;
@@ -41,7 +41,7 @@ __target__ array<double,DQ_d> InterpVelocity(const VectorField* lat_u_ptr,
   int d;
   int i,j,k;
   /* zero the output */
-  array<double,DQ_d> v = {0,0,0};
+  target::array<double,DQ_d> v = {0,0,0};
   //v[0] = v[1] = v[2] = 0.0;
 
   for (d=0; d<DQ_d; d++) {

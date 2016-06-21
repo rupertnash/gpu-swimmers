@@ -2,9 +2,9 @@
 #ifndef SWIMMER_ARRAY_H
 #define SWIMMER_ARRAY_H
 
-#include "NdArray.h"
-#include "SharedItem.h"
-#include "SharedNdArray.h"
+#include "target/NdArray.h"
+#include "target/SharedItem.h"
+#include "target/SharedNdArray.h"
 
 #include "Lists.h"
 
@@ -26,11 +26,11 @@ struct SwimmerArray {
   void AddForces(Lattice* lat) const;
   void Move(Lattice* lat);
   size_t num;
-  SharedItem<CommonParams> common;
-  SharedItem<VectorList> r;
-  SharedItem<VectorList> v;
-  SharedItem<VectorList> n;
-  SharedItem<RandList> prng;
+  target::SharedItem<CommonParams> common;
+  target::SharedItem<VectorList> r;
+  target::SharedItem<VectorList> v;
+  target::SharedItem<VectorList> n;
+  target::SharedItem<RandList> prng;
 };
 
 
