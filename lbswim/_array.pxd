@@ -1,11 +1,11 @@
 from cpython cimport Py_buffer
 from dq cimport *
 
-cdef extern from "array.h":
+cdef extern from "target/array.h" namespace "target":
     cdef cppclass array[T, N]:
         pass
 
-cdef extern from "NdArray.h":
+cdef extern from "target/NdArray.h" namespace "target":
     cdef cppclass SpaceIndexer[NDIM]:
         array[size_t, NDIM] shape
         array[size_t, NDIM] strides
