@@ -3,9 +3,9 @@
 #define TARGET_CUDA_BACKEND_H
 
 #include "./func_attr.h"
-#include "../array.h"
+#include "./array.h"
 #include "./function_traits.h"
-#include "../Nd.h"
+#include "./Nd.h"
 #include <assert.h>
 
 namespace target {
