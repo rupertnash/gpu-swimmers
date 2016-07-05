@@ -38,7 +38,7 @@ __target__ void AccumulateDeltaForce(VectorField* lat_force_ptr, const double* r
   size_t d;
   size_t i,j,k;
   VectorField& lat_force = *lat_force_ptr;
-  const Shape& n = lat_force.indexer.shape;
+  const Shape& n = lat_force.Shape();
   
   for (d=0; d<DQ_d; d++) {
     x0 = ceil(r[d]-2.);

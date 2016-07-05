@@ -26,7 +26,7 @@ public:
     const int nDims = impl.nDims();
     const int nElems = impl.nElems();
     
-    view->buf = impl.data;
+    view->buf = impl.Data();
     view->len = impl.Size() * nElems * sizeof(ElemType);
     view->readonly = std::is_const<ArrayType>::value;
     // This is OK because Python promises not to alter this string
@@ -43,7 +43,7 @@ public:
     }
     view->shape[nDims] = nElems;
     // Needs factoring to allow layout switching
-    view->strides[nDims] = sizeof(ElemType) * impl.element_pitch;
+    view->strides[nDims] = sizeof(ElemType) * impl.Pitch();
 
     view->internal = NULL;
   }

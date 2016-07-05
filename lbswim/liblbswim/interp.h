@@ -32,7 +32,7 @@ template<typename Indexable>
 __target__ target::array<double,DQ_d> InterpVelocity(const VectorField* lat_u_ptr,
 			       const Indexable& r) {
   auto& lat_u = *lat_u_ptr;
-  auto n = lat_u.indexer.shape;
+  auto n = lat_u.Shape();
   
   int indices[DQ_d][4];
   double deltas[DQ_d][4];

@@ -72,10 +72,7 @@ namespace target {
     static_assert(ArrayT::MaxVVL() >= VL, "Array not guaranteed to work with this vector length");
     assert(ijk % VL == 0);
     
-    VectorView<ArrayT, VL> ans;
-    ans.zero.data = arr->data + ijk;
-    ans.zero.stride = arr->element_pitch;
-    return ans;
+    return arr->template GetVectorView<VL> (ijk);
   }
   
   template<size_t ND, size_t VL>

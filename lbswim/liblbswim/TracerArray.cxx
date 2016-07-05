@@ -31,7 +31,7 @@ TARGET_KERNEL_DEFINE(TracerArrayMoveK, VectorList* part_r,
        * where v(R) is the interpolated velocity at the position of the
        * particle
        */  
-      auto size = lat_u->indexer.shape;
+      auto size = lat_u->Shape();
       auto fluid_v = InterpVelocity(lat_u, part_r_vec[iPart]);
       
       for (int d=0; d<DQ_d; d++) {

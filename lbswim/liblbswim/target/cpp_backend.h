@@ -5,6 +5,7 @@
 #include "./func_attr.h"
 #include "./array.h"
 #include "./Nd.h"
+#include "./NdArray.h"
 #include "./function_traits.h"
 
 namespace target {
@@ -12,8 +13,6 @@ namespace target {
   // Forward declarations
   template<size_t, size_t>
   struct CppThreadContext;
-  template<class, size_t>
-  struct VectorView;
   
   // Target-only class that controls the iteration over an index space
   template<size_t ND = 1, size_t VL = TARGET_DEFAULT_VVL>
@@ -103,21 +102,7 @@ namespace target {
 
   template<size_t ND = 1, size_t VL = TARGET_DEFAULT_VVL>
   std::ptrdiff_t operator-(const CppThreadContext<ND, VL>& a, const CppThreadContext<ND, VL>& b);
-  
-  // // Target-only class for instruction-level iteration over the space
-  template<class AT, size_t VL = TARGET_DEFAULT_VVL>
-  struct VectorView {
-    typedef AT ArrayT;
-    typedef typename AT::ElemType ElemType;
-    typedef typename AT::WrapType WrapType;
-
-    WrapType zero;
-    WrapType operator[](size_t i);
-    ElemType& operator()(size_t i, size_t d);
-    const ElemType& operator()(size_t i, size_t d) const;
-
-  };
-  
+    
 
   template<class Impl, size_t ND, size_t VL>
   struct Kernel {

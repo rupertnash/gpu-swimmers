@@ -57,7 +57,7 @@ __targetConst__ double DQ_delta[DQ_d][DQ_d] = {{1.0, 0.0, 0.0},
 
 TARGET_KERNEL_DECLARE(LatticeStepK, 3, TARGET_DEFAULT_VVL, const LBParams*, LDView);
 TARGET_KERNEL_DEFINE(LatticeStepK, const LBParams* params, LDView data) {
-  auto shape = data.rho->indexer.shape;
+  auto shape = data.rho->Shape();
   FOR_TLP(threadCtx) {
     const auto fOld = threadCtx.GetCurrentElements(data.fOld);
     const auto force = threadCtx.GetCurrentElements(data.force);

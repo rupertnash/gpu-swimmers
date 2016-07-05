@@ -5,11 +5,7 @@
 #include "func_attr.h"
 
 #include "array.h"
-/* #include <memory> */
-/* #include <algorithm> */
-/* #include <numeric> */
-/* #include <iostream> */
-/* #include <assert.h> */
+
 namespace target {
   
   template <size_t ND>

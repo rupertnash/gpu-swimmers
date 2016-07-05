@@ -6,6 +6,7 @@
 #include "./array.h"
 #include "./function_traits.h"
 #include "./Nd.h"
+#include "./NdArray.h"
 #include <assert.h>
 
 namespace target {
@@ -13,8 +14,6 @@ namespace target {
   // Forward declarations
   template<size_t, size_t>
   struct CudaThreadContext;
-  template<class, size_t>
-  struct VectorView;
   // template<size_t, size_t>
   // struct CudaSimdContext;
 
@@ -80,18 +79,6 @@ namespace target {
   template<size_t ND, size_t VL>
   __target__ bool operator<(const CudaThreadContext<ND, VL>& a, const CudaThreadContext<ND, VL>& b);
 
-  // Target-only class for instruction-level iteration over the space
-  template<class AT, size_t VL = TARGET_DEFAULT_VVL>
-  struct VectorView {
-    typedef AT ArrayT;
-    typedef typename AT::ElemType ElemType;
-    typedef typename AT::WrapType WrapType;
-
-    WrapType zero;
-    __target__ WrapType operator[](size_t i);
-    __target__ ElemType& operator()(size_t i, size_t d);
-    __target__ const ElemType& operator()(size_t i, size_t d) const;
-  };
   
  template<class Impl, size_t ND, size_t VL>
  struct Kernel {
