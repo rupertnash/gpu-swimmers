@@ -54,15 +54,12 @@ __target__ target::array<double,DQ_d> InterpVelocity(const VectorField* lat_u_pt
   }
 
   for (i=0; i<4; ++i) {
-    auto plane_u = lat_u[indices[DQ_X][i]];
     for (j=0; j<4; ++j) {
-      auto line_u = plane_u[indices[DQ_Y][j]];
       for (k=0; k<4; ++k) {
-	auto point_u = line_u[indices[DQ_Z][k]];
 	/* evaluate the delta function */
 	delta3d = deltas[DQ_X][i] * deltas[DQ_Y][j] * deltas[DQ_Z][k];
 	for (d=0; d<3; ++d) {
-	  v[d] += delta3d * point_u[d];
+	  v[d] += delta3d * lat_u(indices[DQ_X][i], indices[DQ_Y][j], indices[DQ_Z][k], d);
 	}
       }
     }

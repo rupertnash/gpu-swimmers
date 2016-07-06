@@ -50,17 +50,14 @@ __target__ void AccumulateDeltaForce(VectorField* lat_force_ptr, const double* r
   }
   
   for (i=0; i<4; ++i) {
-    auto&& plane_force = lat_force[indices[DQ_X][i]];
     for (j=0; j<4; ++j) {
-      auto&& line_force = plane_force[indices[DQ_Y][j]];
       for (k=0; k<4; ++k) {
-	auto&& point_force = line_force[indices[DQ_Z][k]];
 	double delta3d = (deltas[DQ_X][i] *
 			  deltas[DQ_Y][j] *
 			  deltas[DQ_Z][k]);
 	/* add force contributions */
 	for (d=0; d<DQ_d; ++d) {
-	  target::atomic::increment(point_force[d], delta3d * F[d]);
+	  target::atomic::increment(lat_force(indices[DQ_X][i], indices[DQ_Y][j], indices[DQ_Z][k], d), delta3d * F[d]);
 	}
 	
       }/* k */

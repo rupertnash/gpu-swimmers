@@ -148,57 +148,6 @@ namespace target {
     }
   }
 
-  class SubscriptHelper {
-  public:
-    template<typename T, size_t ND, size_t nElem, size_t ALIGN, size_t MAX_VVL>
-    __targetBoth__ static typename NdArray<T, ND, nElem, ALIGN, MAX_VVL>::SubType Get(NdArray<T, ND, nElem, ALIGN, MAX_VVL>& self, const size_t i) {
-      
-      NdArray<T, ND-1, nElem, ALIGN, MAX_VVL> ans;
-      const auto offset = i * self.indexer.strides[0];
-      ans.data = self.data + offset;
-      ans.buffer_size_bytes = self.buffer_size_bytes - offset*sizeof(T);
-      ans.raw_data = nullptr;
-      ans.element_pitch = self.element_pitch;
-      ans.indexer = decltype(ans.indexer)::ReduceFrom(self.indexer);
-      return ans;
-    }
-
-    template<typename T, size_t nElem, size_t ALIGN, size_t MAX_VVL>
-    __targetBoth__ static typename NdArray<T, 1, nElem, ALIGN, MAX_VVL>::SubType Get(NdArray<T, 1, nElem, ALIGN, MAX_VVL>& self, const size_t i) {
-      ElemWrapper<T, nElem> ans;
-      ans.data = self.data + i * self.indexer.strides[0];
-      // Refactor to allow layout switching
-      ans.stride = self.element_pitch;
-      return ans;
-    }
-    template<typename T, size_t ND, size_t nElem, size_t ALIGN, size_t MAX_VVL>
-    __targetBoth__ static typename NdArray<T, ND, nElem, ALIGN, MAX_VVL>::ConstSubType Get(const NdArray<T, ND, nElem, ALIGN, MAX_VVL>& self, const size_t i) {
-      NdArray<T, ND-1, nElem, ALIGN, MAX_VVL> ans;
-      const auto offset = i * self.indexer.strides[0];
-      ans.data = self.data + offset;
-      ans.buffer_size_bytes = self.buffer_size_bytes - offset*sizeof(T);
-      ans.raw_data = nullptr;
-      ans.element_pitch = self.element_pitch;
-      ans.indexer = decltype(ans.indexer)::ReduceFrom(self.indexer);
-      return ans;
-    }
-
-    template<typename T, size_t nElem, size_t ALIGN, size_t MAX_VVL>
-    __targetBoth__ static typename NdArray<T, 1, nElem, ALIGN, MAX_VVL>::ConstSubType Get(const NdArray<T, 1, nElem, ALIGN, MAX_VVL>& self, const size_t i) {
-      ElemWrapper<const T, nElem> ans;
-      ans.data = self.data + i * self.indexer.strides[0];
-      // Refactor to allow layout switching
-      ans.stride = self.element_pitch;
-      return ans;
-    }
-  };
-  
-  // Subscript to return an array with dimensionality ND-1 or an
-  // ElementWrapper, as appropriate.
-  template <typename T, size_t ND, size_t nElem, size_t ALIGN, size_t MAX_VVL>
-  __targetBoth__ auto NdArray<T, ND, nElem, ALIGN, MAX_VVL>::operator[](size_t i) -> SubType {
-    return SubscriptHelper::Get(*this, i);
-  }
   template <typename T, size_t ND, size_t nElem, size_t ALIGN, size_t MAX_VVL>
   __targetBoth__ auto NdArray<T, ND, nElem, ALIGN, MAX_VVL>::operator[](const ShapeType& idx) -> WrapType {
     WrapType ans;
@@ -208,11 +157,6 @@ namespace target {
     return ans;
   }
 
-  template <typename T, size_t ND, size_t nElem, size_t ALIGN, size_t MAX_VVL>
-  __targetBoth__ auto NdArray<T, ND, nElem, ALIGN, MAX_VVL>::operator[](size_t i) const -> ConstSubType {
-    return SubscriptHelper::Get(*this, i);
-  }
-  
   template <typename T, size_t ND, size_t nElem, size_t ALIGN, size_t MAX_VVL>
   __targetBoth__ auto NdArray<T, ND, nElem, ALIGN, MAX_VVL>::operator[](const ShapeType& idx) const -> ConstWrapType {
     ConstWrapType ans;
@@ -245,6 +189,17 @@ namespace target {
     return data[i * indexer.strides[0] + j * indexer.strides[1] + element_pitch*d];
   }
 
+  template <typename T, size_t ND, size_t nElem, size_t ALIGN, size_t MAX_VVL>
+  __targetBoth__ auto NdArray<T, ND, nElem, ALIGN, MAX_VVL>::operator()(const size_t i, const size_t j, const size_t k, const size_t d) ->  ElemType&  {
+    static_assert(nDims() == 3, "Only valid for 3D arrays");
+    return data[i * indexer.strides[0] + j * indexer.strides[1] + element_pitch*d];
+  }
+  template <typename T, size_t ND, size_t nElem, size_t ALIGN, size_t MAX_VVL>
+  __targetBoth__ auto NdArray<T, ND, nElem, ALIGN, MAX_VVL>::operator()(const size_t i, const size_t j, const size_t k, const size_t d) const -> const ElemType& {
+    static_assert(nDims() == 3, "Only valid for 3D arrays");
+    return data[i * indexer.strides[0] + j * indexer.strides[1] + k * indexer.strides[2] + element_pitch*d];
+  }
+  
   template <typename T, size_t ND, size_t nElem, size_t ALIGN, size_t MAX_VVL>
   template<size_t ViewVL>
   __targetBoth__ auto NdArray<T, ND, nElem, ALIGN, MAX_VVL>::GetVectorView(size_t ijk) -> VectorView<NdArray, ViewVL> {

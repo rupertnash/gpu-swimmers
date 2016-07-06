@@ -73,7 +73,7 @@ namespace target {
     }
   };
 
-  class SubscriptHelper;
+  //class SubscriptHelper;
   
   template <class T>
   class SharedItem;
@@ -93,9 +93,6 @@ namespace target {
     typedef ElemWrapper<T, nElem> WrapType;
     typedef ElemWrapper<const T, nElem> ConstWrapType;
   
-    typedef typename std::conditional<ND==1, WrapType, NdArray<T, ND-1, nElem, ALIGN, MAX_VVL> >::type SubType;
-    typedef typename std::conditional<ND==1, ConstWrapType, const NdArray<T, ND-1, nElem, ALIGN, MAX_VVL> >::type ConstSubType;
-    
     __targetBoth__ bool OwnsData() const;
   
     __targetBoth__ constexpr static size_t nElems();
@@ -128,10 +125,8 @@ namespace target {
   
     // Subscript to return an array with dimensionality ND-1 or an
     // ElementWrapper, as appropriate.
-    __targetBoth__ SubType operator[](size_t i);
     __targetBoth__ WrapType operator[](const ShapeType& idx);
 
-    __targetBoth__ ConstSubType operator[](size_t i) const;
     __targetBoth__ ConstWrapType operator[](const ShapeType& idx) const;
   
     __targetBoth__ ElemType& operator()(const size_t i, const size_t d);
@@ -140,6 +135,9 @@ namespace target {
     __targetBoth__ ElemType& operator()(const size_t i, const size_t j, const size_t d);
     __targetBoth__ const ElemType& operator()(const size_t i, const size_t j, const size_t d) const;
   
+    __targetBoth__ ElemType& operator()(const size_t i, const size_t j, const size_t k, const size_t d);
+    __targetBoth__ const ElemType& operator()(const size_t i, const size_t j, const size_t k, const size_t d) const;
+    
     __targetBoth__ bool operator !=(const NdArray& other);
 
     template<size_t ViewVL>
@@ -158,7 +156,7 @@ namespace target {
     // Stride (in units of sizeof(T) bytes) between the elements of a contained item
     size_t element_pitch;
     
-    friend class SubscriptHelper;
+    //friend class SubscriptHelper;
     friend class SharedItem<NdArray>;
   };
 
