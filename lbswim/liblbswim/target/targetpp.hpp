@@ -11,6 +11,11 @@ namespace target {
     targetMalloc(reinterpret_cast<void**>(&ptr), sizeof(T) * n);
   }
   
+  template<>
+  inline void malloc(void*& ptr, const size_t n) {
+    targetMalloc(&ptr, n);
+  }
+  
   template<typename T>
   void free(T* ptr) {
     targetFree(reinterpret_cast<void*>(ptr));

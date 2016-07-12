@@ -17,7 +17,7 @@ namespace target {
     SharedType* host;
     SharedType* device;
     T* device_data;
-    char* raw_device_data;
+    void* raw_device_data;
     size_t dataSize;
   
     // Helpers for implementing move semantics

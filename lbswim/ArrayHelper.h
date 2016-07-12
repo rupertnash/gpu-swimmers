@@ -14,7 +14,7 @@ template<typename ArrayType>
 class ArrayHelper {
   typedef typename ArrayType::ShapeType ShapeType;
   typedef typename ArrayType::ElemType ElemType;
-
+  typedef typename ArrayType::LayoutPolicy LayoutPolicy;
   ArrayType& impl;
 public:
   ArrayHelper(ArrayType& impl_) : impl(impl_)
@@ -22,35 +22,24 @@ public:
 
   void GetBuffer(Py_buffer* view, int flags) {
     const ShapeType& shape = impl.Shape();
-    const ShapeType& strides = impl.Strides();
+    //const ShapeType& strides = impl.Strides();
     const int nDims = impl.nDims();
     const int nElems = impl.nElems();
     
     view->buf = impl.Data();
-    view->len = impl.Size() * nElems * sizeof(ElemType);
+    view->len = impl.DataSize() * sizeof(ElemType);
     view->readonly = std::is_const<ArrayType>::value;
     // This is OK because Python promises not to alter this string
     view->format = const_cast<char*>(TypeHelper<ElemType>::format);
     view->ndim = nDims+1;
     view->itemsize = sizeof(ElemType);
-
     view->shape = new Py_ssize_t[nDims + 1];
     view->strides = new Py_ssize_t[nDims + 1];
-    view->suboffsets = NULL;
-    for (size_t i = 0; i < nDims; ++i) {
-      view->shape[i] = shape[i];
-      view->strides[i] = sizeof(ElemType) * strides[i];
-    }
-    view->shape[nDims] = nElems;
-    // Needs factoring to allow layout switching
-    view->strides[nDims] = sizeof(ElemType) * impl.Pitch();
-
-    view->internal = NULL;
+    LayoutPolicy::CreateBufferData(impl, view->shape, view->strides, view->suboffsets, view->internal);
   }
 
   void ReleaseBuffer(Py_buffer* view) {
-    delete[] view->shape;
-    delete[] view->strides;
+    LayoutPolicy::ReleaseBufferData(view->internal);
   }
 };
 

@@ -55,36 +55,28 @@ namespace target {
     // alloc the device main obj
     target::malloc(device);
 
-    /*
-      element_pitch = ((indexer.size - 1)/MAX_VVL + 1) * MAX_VVL;
-      const auto element_pitch_bytes = element_pitch * sizeof(T);
-      const auto unpadded_buffer_size_bytes = nElem * element_pitch_bytes;
-      buffer_size_bytes = unpadded_buffer_size_bytes + Alignment();
-      raw_data = std::malloc(buffer_size_bytes);
-      void* tmp = raw_data;
-      assert(std::align(Alignment(), unpadded_buffer_size_bytes, tmp, buffer_size_bytes) != NULL);
-      data = static_cast<T*>(tmp);
-    */
-
     // alloc the device data array
-    target::malloc(raw_device_data, host->buffer_size_bytes);
+    target::malloc(raw_device_data, host->raw_buffer_size_bytes);
     // align it
-    void* devdata = raw_device_data;
-    assert(std::align(host->Alignment(), host->element_pitch * sizeof(T) * nElem, devdata, host->buffer_size_bytes) != NULL);
-    device_data = static_cast<T*>(devdata);
-
+    device_data = host->indexer.AlignRawStorage(raw_device_data);
+    
     // set the copy size
-    dataSize = host->element_pitch * nElem;
-
+    dataSize = host->indexer.MinStorageSize();
+    
     // prepare an array that points to the device data
     SharedType tmp;
+    
+    tmp.shape = host->shape;
+    tmp.size = host->size;
     tmp.indexer = host->indexer;
-    tmp.buffer_size_bytes = host->buffer_size_bytes;
+
+    tmp.data = device_data;
+    tmp.buffer_size = host->buffer_size;
+    
     // This should be null as we manage the memory for the device.
     tmp.raw_data = nullptr;
-    tmp.data = device_data;
-    tmp.element_pitch = host->element_pitch;
-  
+    tmp.raw_buffer_size_bytes = host->raw_buffer_size_bytes;
+    
     target::copyIn(device,
 		   &tmp);
   }
