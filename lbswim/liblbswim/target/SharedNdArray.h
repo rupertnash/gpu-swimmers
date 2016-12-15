@@ -18,7 +18,7 @@ namespace target {
     SharedType* device;
     T* device_data;
     void* raw_device_data;
-    size_t dataSize;
+    size_t data_size_bytes;
   
     // Helpers for implementing move semantics
     void Reset();

@@ -10,12 +10,13 @@ namespace target {
   template<typename T, size_t ND, size_t nElem>
   void SharedItem< NdArray<T, ND, nElem> >::Reset() {
     host = new SharedType();
+
     target::malloc(device);
     target::copyIn(device,
 		   host);
     device_data = nullptr;
     raw_device_data = nullptr;
-    dataSize = 0;
+    data_size_bytes = 0;
   }
 
   template<typename T, size_t ND, size_t nElem>
@@ -24,12 +25,11 @@ namespace target {
     device = other.device;
     device_data = other.device_data;
     raw_device_data = other.raw_device_data;
-    dataSize = other.dataSize;
+    data_size_bytes = other.data_size_bytes;
   }
 
   template<typename T, size_t ND, size_t nElem>
   void SharedItem< NdArray<T, ND, nElem> >::Free() {
-  
     target::free(raw_device_data);
     raw_device_data = nullptr;
     device_data = nullptr;
@@ -40,7 +40,7 @@ namespace target {
     delete host;
     host = nullptr;
   
-    dataSize = 0;
+    data_size_bytes = 0;
   }
 
   template<typename T, size_t ND, size_t nElem>
@@ -57,11 +57,12 @@ namespace target {
 
     // alloc the device data array
     target::malloc(raw_device_data, host->raw_buffer_size_bytes);
+
     // align it
     device_data = host->indexer.AlignRawStorage(raw_device_data);
     
     // set the copy size
-    dataSize = host->indexer.MinStorageSize();
+    data_size_bytes = host->indexer.MinStorageSize();
     
     // prepare an array that points to the device data
     SharedType tmp;
@@ -128,16 +129,16 @@ namespace target {
 
   template<typename T, size_t ND, size_t nElem>
   void SharedItem< NdArray<T, ND, nElem> >::H2D() {
-    target::copyIn(device_data,
-		   host->data,
-		   dataSize);
+    copyToTarget(device_data,
+		 host->data,
+		 data_size_bytes);
   }
 
   template<typename T, size_t ND, size_t nElem>
   void SharedItem< NdArray<T, ND, nElem> >::D2H() {
-    target::copyOut(host->data,
-		    device_data,
-		    dataSize);
+    copyFromTarget(host->data,
+		   device_data,
+		   data_size_bytes);
   }
 }
 #endif // SHAREDNDARRAY_HPP

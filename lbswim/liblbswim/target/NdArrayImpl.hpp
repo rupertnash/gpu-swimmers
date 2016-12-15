@@ -99,6 +99,7 @@ namespace target {
   {
     raw_buffer_size_bytes = indexer.RawStorageSize();
     raw_data = std::malloc(raw_buffer_size_bytes);
+    assert(raw_data != nullptr);
     data = indexer.AlignRawStorage(raw_data);
     
     auto buffer_size_bytes = indexer.MinStorageSize();
@@ -119,10 +120,7 @@ namespace target {
   // copy assign
   template <typename T, size_t ND, size_t nElem, typename LayoutT>
   __targetBoth__ auto NdArray<T, ND, nElem, LayoutT>::operator=(const NdArray& other) -> NdArray& {
-    if (OwnsData()) {
-      std::free(raw_data);
-      raw_data = nullptr;
-    }
+    Free();
     // Note that raw = null => this doesn't own the data    
     indexer = other.indexer;
     data = other.data;

@@ -133,26 +133,28 @@ namespace target {
 	return element_pitch;
       }
 
-      size_t MinStorageSize() const {
+      __targetBoth__ size_t MinStorageSize() const {
 	const auto element_pitch_bytes = element_pitch * sizeof(T);
 	return nElem * element_pitch_bytes;
       }
       
-      size_t RawStorageSize() const {
+      __targetBoth__ size_t RawStorageSize() const {
 	return MinStorageSize() + Alignment();
       }
       
-      T* AlignRawStorage(void* raw_ptr) const {
+      __targetBoth__ T* AlignRawStorage(void* raw_ptr) const {
 	void* tmp = raw_ptr;
 	const auto unpadded_buffer_size_bytes = MinStorageSize();
 	auto space = RawStorageSize();
-	assert(std::align(Alignment(), unpadded_buffer_size_bytes, tmp, space) != NULL);
+	auto ans = std::align(Alignment(), unpadded_buffer_size_bytes, tmp, space);
+	printf("aligned ptr = %p\n");
+	assert(ans != nullptr);
 	return static_cast<T*>(tmp);
       }
             
       template <class ArrayT, class IntT>	
       static void CreateBufferData(ArrayT& array, IntT*& shape, IntT*& strides, IntT*& suboffsets, void*& internal) {
-	suboffsets = NULL;
+	suboffsets = nullptr;
 	auto& aShape = array.Shape();
 	
 	for (size_t i = 0; i < ND; ++i) {
@@ -161,7 +163,7 @@ namespace target {
 	}
 	shape[ND] = nElem;
 	strides[ND] = sizeof(ElemType) * array.indexer.element_pitch;
-	internal = NULL;
+	internal = nullptr;
       }
       
       static void ReleaseBufferData(void*& internal) {
