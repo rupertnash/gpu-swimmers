@@ -147,7 +147,6 @@ namespace target {
 	const auto unpadded_buffer_size_bytes = MinStorageSize();
 	auto space = RawStorageSize();
 	auto ans = std::align(Alignment(), unpadded_buffer_size_bytes, tmp, space);
-	printf("aligned ptr = %p\n");
 	assert(ans != nullptr);
 	return static_cast<T*>(tmp);
       }

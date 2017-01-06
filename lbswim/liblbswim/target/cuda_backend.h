@@ -92,7 +92,7 @@ namespace target {
    __targetBoth__ constexpr size_t Dims() const {
      return ND;
    }
-   __targetBoth__ constexpr size_t VecLen() const {
+   __targetBoth__ constexpr static size_t VecLen() {
      return VL;
    }
  };

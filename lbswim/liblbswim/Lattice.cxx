@@ -61,9 +61,8 @@ TARGET_KERNEL_DEFINE(LatticeStepK, const LBParams* params, LDView data) {
   FOR_TLP(threadCtx) {
     const auto fOld = threadCtx.GetCurrentElements(data.fOld);
     const auto force = threadCtx.GetCurrentElements(data.force);
-    typedef target::NdArray<double, 1, DQ_q> DistList;
-    DistList fPostCollision(VecLen());
-
+    double fPostCollision[DQ_q][VecLen()];
+    
     FOR_ILP(i) {
       double mode[DQ_q];
       /* convenience vars */
@@ -162,9 +161,9 @@ TARGET_KERNEL_DEFINE(LatticeStepK, const LBParams* params, LDView data) {
     
       /* project back to the velocity basis */
       for (size_t p=0; p<DQ_q; p++) {
-	fPostCollision(i, p) = 0.;
+	fPostCollision[p][i] = 0.;
 	for (size_t m=0; m<DQ_q; m++) {
-	  fPostCollision(i, p) += mode[m] * params->mmi[p][m];
+	  fPostCollision[p][i] += mode[m] * params->mmi[p][m];
 	}
       }
     }
